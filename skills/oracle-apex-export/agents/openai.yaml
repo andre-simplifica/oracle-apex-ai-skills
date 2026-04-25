@@ -1,0 +1,7 @@
+interface:
+  display_name: "Oracle APEX Export"
+  short_description: "Oracle APEX 24.2 export and snapshot guidance"
+  default_prompt: "Use $oracle-apex-export to run or guide an APEX export while following the local project profile."
+
+policy:
+  allow_implicit_invocation: true

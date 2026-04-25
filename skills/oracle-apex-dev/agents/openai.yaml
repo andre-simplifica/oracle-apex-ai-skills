@@ -1,0 +1,7 @@
+interface:
+  display_name: "Oracle APEX DEV"
+  short_description: "Oracle APEX 24.2 development with project standards and safety guardrails"
+  default_prompt: "Use $oracle-apex-dev to analyze or implement the APEX request while following the local project profile."
+
+policy:
+  allow_implicit_invocation: true
