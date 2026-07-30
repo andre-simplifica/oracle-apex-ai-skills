@@ -1,0 +1,7 @@
+interface:
+  display_name: "Oracle APEX AI Skills"
+  short_description: "Install and orchestrate the Oracle APEX project kit"
+  default_prompt: "Use $oracle-apex-ai-skills to initialize or update this Oracle APEX 24.2 project safely."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/andre-simplifica/oracle-apex-ai-skills/schemas/compatibility.schema.json",
+  "title": "Oracle APEX AI Skills compatibility record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kit",
+    "apex",
+    "database",
+    "core_skills",
+    "optional_skills"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kit": {
+      "const": "oracle-apex-ai-skills"
+    },
+    "apex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "verified",
+        "other_versions"
+      ],
+      "properties": {
+        "target": {
+          "const": "24.2"
+        },
+        "verified": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "other_versions": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object_lock_runtime_required",
+        "object_lock_mode"
+      ],
+      "properties": {
+        "object_lock_runtime_required": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "object_lock_mode": {
+          "const": "cooperative"
+        }
+      }
+    },
+    "core_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 4,
+      "uniqueItems": true
+    },
+    "optional_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kit": "oracle-apex-ai-skills",
+  "apex": {
+    "target": "24.2",
+    "verified": [
+      "24.2"
+    ],
+    "other_versions": "Validate export behavior, API signatures, and runtime behavior before use."
+  },
+  "database": {
+    "object_lock_runtime_required": "1.0.0",
+    "object_lock_mode": "cooperative"
+  },
+  "core_skills": [
+    "oracle-apex-ai-skills",
+    "oracle-apex-dev",
+    "oracle-apex-export",
+    "oracle-apex-object-lock"
+  ],
+  "optional_skills": [
+    "build-apex-brand-reports",
+    "oracle-apex-echarts"
+  ]
+}

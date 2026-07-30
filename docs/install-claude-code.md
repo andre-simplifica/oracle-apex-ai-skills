@@ -24,6 +24,8 @@ The script creates links under:
 ```text
 ~/.claude/skills/oracle-apex-dev
 ~/.claude/skills/oracle-apex-export
+~/.claude/skills/oracle-apex-ai-skills
+~/.claude/skills/oracle-apex-object-lock
 ```
 
 ## Install in the project
@@ -39,6 +41,8 @@ This creates:
 ```text
 .claude/skills/oracle-apex-dev
 .claude/skills/oracle-apex-export
+.claude/skills/oracle-apex-ai-skills
+.claude/skills/oracle-apex-object-lock
 ```
 
 ## Project profile

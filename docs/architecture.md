@@ -1,30 +1,55 @@
 # Repository Architecture
 
-This repository has two separate responsibilities.
+The repository separates reusable workflows, deterministic project installation, database coordination, and application-specific standards.
 
-## 1. Shared core
-
-Located at:
+## Core Skills
 
 ```text
-skills/oracle-apex-dev/
-skills/oracle-apex-export/
+skills/
+  oracle-apex-ai-skills/
+  oracle-apex-dev/
+  oracle-apex-export/
+  oracle-apex-object-lock/
 ```
 
-This core should work in any Oracle APEX 24.2 project. It defines:
+`oracle-apex-ai-skills` is the main entry point. It interprets natural requests and routes only the required focused skills:
 
-- when to use Page Designer;
-- when to use SQLcl;
-- when to use Object Browser;
-- how to validate runtime behavior;
-- how to use temporary read-only exports;
-- when to consider internal APEX APIs;
-- how to separate analysis, implementation, and publication;
-- which guardrails to use so the agent does not invent objects, rules, or structure.
+```mermaid
+flowchart TD
+    A["Oracle APEX AI Skills"] --> B["Daily APEX development"]
+    A --> C["Shared DEV object change"]
+    A --> D["Initial baseline or release"]
+    B --> E["oracle-apex-dev"]
+    C --> E
+    C --> F["oracle-apex-object-lock"]
+    D --> G["oracle-apex-export"]
+    B -. "when relevant and installed" .-> H["Brand reports or ECharts"]
+```
 
-## 2. Local project profile
+The kit targets Oracle APEX 24.2. Other versions require compatibility validation.
 
-Located inside each consuming project repository:
+## Consuming-Project Installation
+
+Codex repository skills are copied under:
+
+```text
+.agents/skills/
+```
+
+The project manager also writes:
+
+```text
+.oracle-apex-ai/installation-manifest.json
+.oracle-apex-ai/upstream-lock.json
+.oracle-apex-ai/compatibility.json
+Util/scripts/manage_oracle_apex_ai_skills.py
+```
+
+These are managed files. Their checksums make local drift visible and prevent a silent overwrite during update.
+
+## Project-Owned Standards
+
+Each consuming project owns:
 
 ```text
 .oracle-apex-ai/project-profile.md
@@ -32,42 +57,48 @@ Located inside each consuming project repository:
 .oracle-apex-ai/page-patterns/
 ```
 
-This profile defines details that change from one project to another:
+The profile defines application IDs, environments, safe connection commands, UI patterns, code ownership, official export paths, pending-migration paths, and release rules. The reusable core never replaces it.
 
-- main app id;
-- workspace and environment;
-- theme;
-- menu pattern;
-- breadcrumb pattern;
-- button pattern;
-- help pattern;
-- owning packages;
-- example pages;
-- old pages that should not be copied;
-- user-facing language;
-- visual validation checklist.
+This separation allows one application to use an Inline Dialog for help while another uses a drawer without turning either convention into a universal rule.
 
-## Why not copy everything into the skill?
+## Object-Lock Runtime
 
-Because the skill must be reusable. If "help opens from the breadcrumb icon in an Inline Dialog" is true for one project, but another project uses a side drawer, that rule cannot live in the core.
+`oracle-apex-object-lock` ships database assets but does not install them automatically:
 
-The core should say:
-
-> Read the project profile before creating or changing screens.
-
-The project profile should say:
-
-> In this project, help opens from the breadcrumb icon in an Inline Dialog.
-
-## How refresh works
-
-The developer installs the shared core as symbolic links pointing to the clone of this repository.
-
-When there is an improvement:
-
-```bash
-cd ~/.oracle-apex-ai-skills
-bash scripts/update_core.sh
+```text
+DEV_OBJECT_LOCK
+DEV_OBJECT_LOCK_UI1
+DEV_OBJECT_LOCK_I1
+VW_DEV_OBJECT_LOCK_ATIVO
+VW_DEV_OBJECT_LOCK_RECENTE
+PK_DEV_OBJECT_LOCK
 ```
 
-The links continue to point to the updated files. The project profile is not overwritten because it lives in the application repository.
+The runtime is cooperative. It prevents compliant agents and developers from compiling the same live object concurrently, but it is not a hard DDL trigger.
+
+File installation and database installation are intentionally separate:
+
+```text
+Install/update skills -> audit runtime -> request DEV authorization -> install/validate runtime
+```
+
+## Versioned Database Source
+
+The first baseline and normal releases are different:
+
+| Mode | APEX source | Database source |
+| --- | --- | --- |
+| Initial baseline | Complete application | Complete application-schema structure |
+| Daily development | No official export by default | Canonical object edits + pending DDL |
+| Release | Complete application | Changed objects + pending DDL |
+
+Every structural change starts in `db/migrations/pending/` or the path defined by the project. Release generation does not mark migrations as applied.
+
+## Optional Skills
+
+The core works alone. When present:
+
+- `build-apex-brand-reports` owns branded report/help/PDF/spreadsheet workflows;
+- `oracle-apex-echarts` owns Apache ECharts region workflows.
+
+The router may recommend them but must not require, copy, or update them as part of this kit.

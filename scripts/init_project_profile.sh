@@ -7,6 +7,8 @@ project_root="$(pwd)"
 target_dir="${project_root}/.oracle-apex-ai"
 
 mkdir -p "${target_dir}/page-patterns"
+mkdir -p "${project_root}/db/migrations/pending"
+mkdir -p "${project_root}/db/migrations/applied"
 
 copy_if_missing() {
   local source_file="$1"
@@ -26,6 +28,16 @@ copy_if_missing "${repo_root}/templates/app-patterns.md" "${target_dir}/app-patt
 if [[ ! -e "${target_dir}/page-patterns/.gitkeep" ]]; then
   : > "${target_dir}/page-patterns/.gitkeep"
   echo "Created ${target_dir}/page-patterns/.gitkeep"
+fi
+
+if [[ ! -e "${project_root}/db/migrations/pending/.gitkeep" ]]; then
+  : > "${project_root}/db/migrations/pending/.gitkeep"
+  echo "Created ${project_root}/db/migrations/pending/.gitkeep"
+fi
+
+if [[ ! -e "${project_root}/db/migrations/applied/.gitkeep" ]]; then
+  : > "${project_root}/db/migrations/applied/.gitkeep"
+  echo "Created ${project_root}/db/migrations/applied/.gitkeep"
 fi
 
 echo

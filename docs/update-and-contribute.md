@@ -1,100 +1,113 @@
 # Update and Contribute
 
-## Keep your local skills up to date
+## Check the Installed Project
 
-This repository changes over time. Refresh your local installation whenever new guardrails, references, examples, or scripts are published.
+Run the manager already copied into the consuming repository:
 
-The easiest path is to ask your AI agent:
+```bash
+python3 Util/scripts/manage_oracle_apex_ai_skills.py status --project-root .
+```
+
+Statuses:
+
+- `HEALTHY`: every managed file matches its manifest.
+- `NOT_INSTALLED`: no installation manifest exists.
+- `MODIFIED`: a managed or metadata file changed, or an unrecorded file exists inside a managed skill.
+- `INCOMPLETE`: a recorded managed file is missing.
+
+Do not update a `MODIFIED` or `INCOMPLETE` installation until the difference is understood.
+
+## Update From GitHub
+
+Ask Codex:
 
 ```text
-Refresh my local Oracle APEX skill installation using:
+Oracle APEX AI Skills was updated. Update this project from:
 https://github.com/andre-simplifica/oracle-apex-ai-skills
 
-Keep my project-specific files under .oracle-apex-ai/ unchanged.
-Explain what changed after the update.
+Use the requested release tag or commit.
+Run status, check, and update --dry-run first.
+Explain the exact managed-file diff and stop on local managed-file changes.
+Preserve project-profile.md, app-patterns.md, page-patterns, and all migrations.
+Do not change Oracle, import APEX, commit, or push as part of the updater.
 ```
 
-If you prefer doing it manually:
+Manual flow:
 
 ```bash
-cd ~/.oracle-apex-ai-skills
-bash scripts/update_core.sh
+git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git /tmp/oracle-apex-ai-skills-next
+git -C /tmp/oracle-apex-ai-skills-next checkout <tag-or-commit>
+bash /tmp/oracle-apex-ai-skills-next/scripts/validate_repo.sh
 ```
 
-## What the refresh updates
-
-The refresh updates:
-
-- `oracle-apex-dev`;
-- `oracle-apex-export`;
-- generic references;
-- installation scripts;
-- templates.
-
-It does not automatically delete or overwrite:
-
-- `.oracle-apex-ai/project-profile.md` in your project;
-- `.oracle-apex-ai/app-patterns.md` in your project;
-- examples and standards specific to your application.
-
-## Contribute improvements
-
-Suggested flow:
-
-1. Update your clone:
+Compare:
 
 ```bash
-cd ~/.oracle-apex-ai-skills
-git pull
+python3 /tmp/oracle-apex-ai-skills-next/scripts/manage_project_installation.py \
+  check \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit>
 ```
 
-2. Create a branch:
+Preview:
 
 ```bash
-git checkout -b my-improvement
+python3 /tmp/oracle-apex-ai-skills-next/scripts/manage_project_installation.py \
+  update \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit> \
+  --dry-run
 ```
 
-3. Edit the files.
+Apply the file update:
 
-4. If you update the public README onboarding message, update `README.pt-BR.md` too.
+```bash
+python3 /tmp/oracle-apex-ai-skills-next/scripts/manage_project_installation.py \
+  update \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit>
+```
 
-5. Validate scripts:
+Then inspect the consuming-project Git diff and run its validation. Commit/push only when the project's rules or the user authorize publication.
+
+## Update Boundaries
+
+The updater:
+
+- copies the four core skills;
+- updates its own project manager;
+- updates compatibility and source/checksum metadata;
+- preserves project-owned standards and migrations;
+- removes an obsolete managed file only when its current checksum still matches the previous manifest.
+
+The updater never:
+
+- connects to Oracle;
+- upgrades `PK_DEV_OBJECT_LOCK`;
+- applies pending DDL;
+- compiles PL/SQL;
+- imports APEX;
+- commits or pushes.
+
+When a new kit requires a newer object-lock runtime, the compatibility diff reports it. Audit and database installation remain separate authorized operations.
+
+## Contribute Improvements
+
+Contribute generic behavior here; keep application-specific rules in the consuming project.
+
+1. Update the source clone.
+2. Create a focused branch.
+3. Change only the relevant skills, references, templates, scripts, or docs.
+4. Update both public READMEs when onboarding behavior changes.
+5. Run:
 
 ```bash
 bash scripts/validate_repo.sh
 ```
 
-6. Commit:
+6. Review the complete diff for private identifiers and secrets.
+7. Commit, push the branch, and open a pull request according to repository rules.
 
-```bash
-git add .
-git commit -m "Improve Dynamic Actions validation"
-```
+Good core contributions include APEX 24.2 guardrails, SQLcl/export improvements, cooperative-lock improvements, deterministic installer behavior, validation, and clearer project templates.
 
-7. Push:
-
-```bash
-git push -u origin my-improvement
-```
-
-8. Open a Pull Request on GitHub.
-
-## What belongs in a PR to the core
-
-Good candidate:
-
-- generic APEX guardrail;
-- SQLcl improvement;
-- validation checklist that applies to any app;
-- clearer profile template;
-- installation script;
-- documentation fix.
-
-Not a good candidate for the core:
-
-- "In my project the package is named PK_CLIENTE_X";
-- "Our help always uses page 999";
-- "Our menu is named MENU_ADMIN";
-- business rules for a specific customer.
-
-Those details belong in the consuming project's profile.
+Package names, page IDs, customer rules, private environment names, and application-specific UI conventions belong in the consuming project's `.oracle-apex-ai/` files.

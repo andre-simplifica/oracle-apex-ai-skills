@@ -4,6 +4,17 @@ All notable public changes to this repository should be recorded here.
 
 This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 
+## Unreleased
+
+- Added `oracle-apex-ai-skills` as the main router and project installation/update contract.
+- Added repository-scoped Codex installation under `.agents/skills` with dry-run, checksummed manifests, upstream commit tracking, drift detection, and project-owned-file preservation.
+- Added `oracle-apex-object-lock` with the complete cooperative `PK_DEV_OBJECT_LOCK` runtime, read-only audit, strict validation, and shared-DEV workflow.
+- Expanded `oracle-apex-export` with temporary inspection, initial full APEX/schema baseline, application snapshot, and normal release modes.
+- Defined pending DDL migration lifecycle and release packaging rules.
+- Made Oracle APEX 24.2 the explicit verified target and documented other-version validation boundaries.
+- Added optional routing to Brand Report Kit and Oracle APEX ECharts without making either a dependency.
+- Added installer and repository contract tests.
+
 ## 2026-04-25
 
 - Created the initial public Oracle APEX AI skills repository.

@@ -1,148 +1,105 @@
 # Technical Overview
 
-This page is the more structured version of the README for people who want to understand the repository layout, installation model, and project-profile strategy before using the skill.
+## Compatibility
 
-## Supported APEX version
-
-Current target: **Oracle APEX 24.2**.
-
-The instructions were written for APEX 24.2, modern SQLcl, and Oracle Database/Autonomous Database. In other versions, validate API signatures, export behavior, and runtime behavior before standardizing the workflow.
+The verified target is **Oracle APEX 24.2** with modern SQLcl and Oracle Database/Autonomous Database.
 
 | Version | Status |
 | --- | --- |
-| APEX 24.2 | Main target |
-| APEX 24.1 | Likely compatible, validate export behavior and API signatures |
-| APEX 23.2 | Use with caution and validate runtime behavior |
-| APEX older than 23 | Not recommended without adaptation |
+| APEX 24.2 | Verified design target |
+| Other APEX versions | Validate API signatures, export options, metadata, and runtime behavior before use |
 
-## Repository responsibilities
+The consuming project receives `.oracle-apex-ai/compatibility.json`, which also records the required cooperative object-lock runtime.
 
-This repository provides:
+## Responsibilities
 
-- generic APEX development skill: `oracle-apex-dev`;
-- generic APEX export/snapshot skill: `oracle-apex-export`;
-- templates to document each application's standards;
-- install/update scripts for Codex and Claude Code;
-- human documentation for APEX developers who are new to AI agents, skills, or GitHub.
+- `oracle-apex-ai-skills`: router and installation/update contract.
+- `oracle-apex-dev`: APEX and database development workflow.
+- `oracle-apex-object-lock`: shared-DEV object coordination and runtime assets.
+- `oracle-apex-export`: temporary inspection, version-1 baseline, official snapshots, and releases.
+- `templates/`: project-owned profile/pattern scaffolding and managed compatibility.
+- `scripts/manage_project_installation.py`: deterministic repository-scoped installer/updater.
 
-## Core idea
+## Installation Model
 
-Always separate:
-
-**Reusable core**
-
-The shared APEX workflow: SQLcl, Page Designer, Object Browser, internal APEX APIs, runtime validation, read-only exports, and guardrails.
-
-**Project profile**
-
-The way your application works: theme, navigation, breadcrumbs, menus, dialogs, dashboards, owning packages, user-facing language, and example pages.
-
-The reusable core lives here. The project profile lives inside each consuming project.
-
-## Installation model
-
-The install scripts create symbolic links from the AI tool skill folder to this repository's `skills/` folders.
-
-For Codex:
+The team model copies a pinned source into the consuming repository:
 
 ```text
-~/.codex/skills/oracle-apex-dev
-~/.codex/skills/oracle-apex-export
+<project>/.agents/skills/<skill-name>
 ```
 
-For Claude Code:
+The manifest records:
 
-```text
-~/.claude/skills/oracle-apex-dev
-~/.claude/skills/oracle-apex-export
-```
+- source repository;
+- requested ref;
+- resolved commit;
+- installation time;
+- APEX target;
+- required lock runtime;
+- SHA-256 of every managed file;
+- project-owned paths that must be preserved.
 
-Because they are links, updating the repository updates the skill source without copying files around.
+`status` verifies local integrity. `check` compares a new source. `install` and `update` support `--dry-run`. Update stops on managed-file drift and uses temporary backups plus atomic file replacement for rollback on failure.
 
-## Manual install
+The script does not fetch the network itself. The agent or developer obtains and validates a Git source first, which keeps authentication and ref selection visible.
 
-For Codex:
+For a Git source, the manager requires a clean checkout and verifies that `--source-ref` resolves to the checked-out `HEAD`. It strips URL credentials and query strings before writing the repository identifier to project metadata.
 
-```bash
-git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracle-apex-ai-skills
-bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
-```
+## Project Profile
 
-For Claude Code:
+The profile is the project contract, not an installer configuration file. It documents:
 
-```bash
-git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracle-apex-ai-skills
-bash ~/.oracle-apex-ai-skills/scripts/install_claude_code.sh
-```
+- application/workspace/schema identity;
+- approved DEV connection commands without secrets;
+- APEX screen and language patterns;
+- code ownership;
+- object-lock policy;
+- official APEX export structure;
+- database baseline/object source paths;
+- pending/applied migration lifecycle;
+- release paths and publication rules;
+- optional Brand Report Kit or ECharts usage.
 
-Inside the consuming APEX project:
+The installer never overwrites it.
 
-```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
-```
+## Object-Lock Model
 
-Then edit:
+Runtime version `1.0.0` provides:
 
-```text
-.oracle-apex-ai/project-profile.md
-```
+- one active lock per schema owner, object type, and object name;
+- TTL expiration;
+- actor, branch, task, context, Git base/head/start/end SHA evidence;
+- active and recent views;
+- acquire, renew, release, assert, and status APIs.
 
-## Update model
+Package specification and body share one `PACKAGE` lock. The runtime uses autonomous transactions so lock state is not coupled to the caller's business transaction.
 
-When this repository gets an improvement:
+It remains cooperative: it does not install a schema DDL trigger. Any future hard-blocking mode must be an explicit, separately reviewed design.
 
-```bash
-cd ~/.oracle-apex-ai-skills
-bash scripts/update_core.sh
-```
+## Export Model
 
-The script pulls the shared core and reinstalls links. It does not overwrite project profiles under `.oracle-apex-ai/`.
+An initial baseline is full structural source; a normal release is a delta plus a complete APEX app snapshot.
 
-## Using the database
+Baseline structural source includes tables, constraints, non-constraint indexes, sequences, types, views/materialized views, packages, standalone routines, triggers, synonyms, and explicit grants required by the app.
 
-The skill can work from files only, but it is stronger when the agent can safely use your development environment.
+Release scope is reconciled from Git changes, task scope, locks, pending migrations, and authorized DEV source. Modification timestamps alone are insufficient.
 
-Good setups include:
+Every table or structural DDL change starts in the configured pending directory. Release generation never applies or archives it.
 
-- SQLcl with an existing connection;
-- VS Code with Oracle/SQL Developer extension;
-- SQL Developer connection already working;
-- Oracle XE local;
-- Oracle VM;
-- OCI Autonomous Database with wallet or SQLNet;
-- browser access to DEV APEX.
+## Optional Integrations
 
-Never store secrets in this repository or in the project profile. Tell the AI agent how to use the secure local connection you already use.
+The kit has no dependency on:
 
-## What belongs in the core
+- `build-apex-brand-reports`;
+- `oracle-apex-echarts`.
 
-Good core rules:
+When installed and relevant, the router hands those specialized tasks to them. Their files and versions are not managed by this repository.
 
-- generic APEX guardrails;
-- SQLcl and export practices;
-- runtime validation checklists;
-- Page Designer and Object Browser workflow;
-- REST integration, SQL/PLSQL, debugging, background job, security, and high-risk operation guidance that applies broadly;
-- guidance that works across multiple APEX projects.
+## Security and Operations
 
-Do not put project-specific rules in the core:
-
-- package names that only exist in one product;
-- one application's breadcrumb convention;
-- one company's menu names;
-- customer-specific business rules;
-- private URLs, credentials, or screenshots.
-
-Those belong in the consuming project's `.oracle-apex-ai/` profile.
-
-## Documentation Language
-
-The repository is international, so documentation, skills, templates, metadata, and scripts should be in English.
-
-The only Portuguese public onboarding document is:
-
-```text
-README.pt-BR.md
-```
-
-When changing the public README message, update `README.pt-BR.md` as well so Brazilian APEX developers have an easier onboarding path.
+- No passwords, tokens, wallets, connection strings, or private environment values belong in the public core.
+- File installation does not authorize database access.
+- Runtime audit is read-only; runtime installation is a DEV mutation.
+- APEX export does not authorize import.
+- Release generation does not authorize TEST/PROD execution.
+- Git publication remains separate from implementation unless explicitly requested or required by the consuming repository.

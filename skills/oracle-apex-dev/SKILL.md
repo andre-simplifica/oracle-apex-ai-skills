@@ -23,7 +23,8 @@ Do not put conventions from one specific application into this skill core.
 2. Read `.oracle-apex-ai/project-profile.md`, if present.
 3. When the request involves a new screen, visual flow, or UI pattern, read `.oracle-apex-ai/app-patterns.md` and the referenced example pages.
 4. Confirm environment, app id, workspace, schema, and SQLcl connection before any technical execution.
-5. If essential context is missing, state the limitation and ask or perform read-only inspection.
+5. Inspect `.oracle-apex-ai/installation-manifest.json` and the object-lock section of the project profile.
+6. If essential context is missing, state the limitation and ask or perform read-only inspection.
 
 ## Essential Rules
 
@@ -33,6 +34,9 @@ Do not put conventions from one specific application into this skill core.
 - Use Object Browser as a fallback when SQLcl is unavailable or when the project requires the Builder UI.
 - Do not edit versioned APEX exports as the default implementation path; use them as functional reference.
 - When changing versioned PL/SQL for implementation, bug fix, or test work, compile in DEV and validate errors unless the user or environment blocks it.
+- In a shared DEV schema, use `oracle-apex-object-lock` before editing or compiling every supported versioned database object. Acquire before editing, assert immediately before compilation, renew when needed, and release at closeout.
+- Treat one `PACKAGE` lock as covering both its specification and body.
+- Put every table or structural DDL change in the pending migration directory defined by the project profile before applying it.
 - When the user asks only for a plan, review, explanation, or direction, do not change the database without explicit authorization.
 - Runtime validation is required for any visual or functional screen change.
 - User-visible text must use business language and must not expose internal technical names.
@@ -56,6 +60,8 @@ Do not put conventions from one specific application into this skill core.
 - **Internal APEX APIs**: follow [apex-internal-apis.md](references/apex-internal-apis.md) when the change is repeatable, multi-page, or safer through a controlled script.
 - **Runtime**: follow [runtime-validation.md](references/runtime-validation.md).
 - **Help and user text**: follow [help-and-ux.md](references/help-and-ux.md), then apply the local project profile.
+- **Shared DEV objects**: route to `oracle-apex-object-lock` before editing, compiling, replacing, or testing a supported object.
+- **Official baseline or release export**: route to `oracle-apex-export`; daily implementation does not imply publication.
 
 ## Standard Flow
 
@@ -63,17 +69,23 @@ Do not put conventions from one specific application into this skill core.
 2. Read the local project profile and relevant learned patterns.
 3. Classify the task: read-only, small adjustment, repeatable change, new/complex screen, PL/SQL backend, REST/API, background job, debugging, security-sensitive, or destructive/high-risk.
 4. Inspect the repository and/or APEX metadata before changing anything.
-5. Choose the route: Page Designer, SQLcl, Object Browser, or controlled script.
-6. Apply changes in small, validatable units.
-7. Save the page and/or compile objects.
-8. Validate runtime behavior in the application.
-9. Update documentation/profile/patterns when the change reveals a reusable rule.
-10. If the project uses Git and local rules allow it, commit/push only the current task scope.
+5. For supported database objects in shared DEV, refresh Git, inspect locks, and acquire the required locks.
+6. Choose the route: Page Designer, SQLcl, Object Browser, or controlled script.
+7. Apply changes in small, validatable units.
+8. Assert owned locks immediately before each shared DEV compilation, then save the page and/or compile objects.
+9. Validate runtime behavior in the application.
+10. Create or update pending migration files for structural DDL.
+11. Release owned locks and verify task lock residue.
+12. Update documentation/profile/patterns when the change reveals a reusable rule.
+13. Generate an official export only when explicitly requested.
+14. If the project uses Git and local rules allow it, commit/push only the current task scope.
 
 ## Required Closeout
 
 For PL/SQL/database-object tasks, clearly report:
 
+- `Object-lock runtime: INSTALLED | ABSENT | PARTIAL | INCOMPATIBLE | NOT_CHECKED`
+- `Locks acquired/released: ...`
 - `Objects compiled in DEV: ...`
 - `Objects not applied to the database; repository only: ...`
 - `No database objects changed.`

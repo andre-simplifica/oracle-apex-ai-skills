@@ -16,11 +16,16 @@ If it includes private URLs, real workspace names, schema names, SQLcl aliases, 
 
 Never copy a filled project profile into the public skill repository.
 
-If it does not exist, guide the user to create it with:
+If it does not exist, initialize it through the project-managed installation. From a clean, reviewed source:
 
 ```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
+python3 /path/to/oracle-apex-ai-skills/scripts/manage_project_installation.py \
+  install \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit>
 ```
+
+If the four skills are already installed but the project intentionally skipped the scaffold, copy `templates/project-profile.md` manually only after confirming the target does not exist.
 
 ## What the Profile Should Contain
 
@@ -32,6 +37,12 @@ bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
 - API/OpenAPI documentation location.
 - Authentication pattern for internal/private APIs.
 - Default branch and publication rule.
+- Installed skill source/ref/commit and update policy.
+- Cooperative object-lock audit, runtime, actor, TTL, and Git-base rules.
+- Official APEX snapshot and database baseline/object-source paths.
+- Initial-baseline and normal-release rules.
+- Pending and applied migration paths and lifecycle authority.
+- Optional Brand Report Kit and ECharts usage.
 - Page Designer vs SQLcl vs Object Browser standard.
 - Owning packages by functionality type.
 - Navigation, menu, and breadcrumb patterns.
@@ -54,5 +65,8 @@ Before creating or editing a page, read the profile and answer:
 - Where do primary and secondary buttons go?
 - How should success and known failure cases be validated?
 - Which terms must not appear to end users?
+- Which database objects require locks, and is the runtime currently compatible?
+- Is this daily development, a first baseline, or an explicitly requested release?
+- Which structural DDL must be created under the pending path?
 
 If the profile does not answer one of these questions and the repository does not prove the answer either, ask the user or record the decision as pending.

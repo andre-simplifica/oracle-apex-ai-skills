@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/andre-simplifica/oracle-apex-ai-skills/schemas/upstream-lock.schema.json",
+  "title": "Oracle APEX AI Skills upstream lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kit",
+    "installed_at",
+    "repository",
+    "requested_ref",
+    "resolved_commit"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kit": {
+      "const": "oracle-apex-ai-skills"
+    },
+    "installed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolved_commit": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

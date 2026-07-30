@@ -37,6 +37,49 @@ if [[ -d docs/en ]]; then
 fi
 
 bash -n scripts/*.sh
+repo_pycache_dir="${repo_root}/.tmp/pycache"
+mkdir -p "${repo_pycache_dir}"
+PYTHONPYCACHEPREFIX="${repo_pycache_dir}" \
+  python3 -m py_compile scripts/manage_project_installation.py tests/*.py
+PYTHONPYCACHEPREFIX="${repo_pycache_dir}" \
+  python3 -m unittest discover -s tests -v
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+root = Path.cwd()
+json.loads((root / "templates" / "compatibility.json").read_text(encoding="utf-8"))
+for schema in sorted((root / "schemas").glob("*.schema.json")):
+    json.loads(schema.read_text(encoding="utf-8"))
+
+expected = {
+    "oracle-apex-ai-skills",
+    "oracle-apex-dev",
+    "oracle-apex-export",
+    "oracle-apex-object-lock",
+}
+actual = {
+    path.name
+    for path in (root / "skills").iterdir()
+    if path.is_dir() and (path / "SKILL.md").is_file()
+}
+if actual != expected:
+    raise SystemExit(f"Unexpected core skill set: {sorted(actual)}")
+PY
+
+if rg -n --glob '!validate_repo.sh' \
+  '\[TODO|TODO:' skills templates docs scripts README.md README.pt-BR.md; then
+  echo "Unresolved TODO marker found." >&2
+  missing=1
+fi
+
+if rg -n --hidden \
+  '(BEGIN (RSA |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|password[[:space:]]*=[[:space:]]*[^<[:space:]]+)' \
+  skills templates docs scripts README.md README.pt-BR.md; then
+  echo "Potential secret found in public content." >&2
+  missing=1
+fi
 
 if [[ "${missing}" -ne 0 ]]; then
   exit 1

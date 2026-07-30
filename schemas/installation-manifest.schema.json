@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/andre-simplifica/oracle-apex-ai-skills/schemas/installation-manifest.schema.json",
+  "title": "Oracle APEX AI Skills project installation manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kit",
+    "installed_at",
+    "source",
+    "compatibility",
+    "managed_files",
+    "metadata_files",
+    "project_owned_paths",
+    "previous_source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kit": {
+      "const": "oracle-apex-ai-skills"
+    },
+    "installed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apex_target",
+        "object_lock_runtime_required"
+      ],
+      "properties": {
+        "apex_target": {
+          "type": "string"
+        },
+        "object_lock_runtime_required": {
+          "type": "string"
+        }
+      }
+    },
+    "managed_files": {
+      "$ref": "#/$defs/checksums"
+    },
+    "metadata_files": {
+      "$ref": "#/$defs/checksums"
+    },
+    "project_owned_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "previous_source": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/source"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "requested_ref",
+        "resolved_commit"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requested_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolved_commit": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "checksums": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?!/)(?!.*\\.\\.).+"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    }
+  }
+}

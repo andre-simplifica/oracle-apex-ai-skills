@@ -21,11 +21,13 @@ This repository is the reusable Oracle APEX AI Skills project.
 
 ## Source Boundaries
 
+- Main routing and project-managed installation guidance belongs in `skills/oracle-apex-ai-skills/`.
 - General APEX development guidance belongs in `skills/oracle-apex-dev/`.
-- General export and snapshot guidance belongs in `skills/oracle-apex-export/`.
+- Cooperative shared-DEV object-lock guidance and runtime assets belong in `skills/oracle-apex-object-lock/`.
+- General baseline, export, snapshot, and release guidance belongs in `skills/oracle-apex-export/`.
 - Human-facing guides belong in `docs/`.
 - Reusable project-profile scaffolding belongs in `templates/`.
-- Installer and validation logic belongs in `scripts/`.
+- Installer, updater, and validation logic belongs in `scripts/`.
 - Application-specific project standards belong in the consuming project's `.oracle-apex-ai/` profile, not in this reusable core.
 
 ## Validation
@@ -47,4 +49,3 @@ For Codex work:
 3. Run `bash scripts/validate_repo.sh`.
 4. Commit the scoped change.
 5. Push to `origin main`.
-

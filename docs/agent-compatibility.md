@@ -7,25 +7,32 @@ This project should not be locked to a single tool.
 The main content is Markdown:
 
 ```text
+skills/oracle-apex-ai-skills/SKILL.md
 skills/oracle-apex-dev/SKILL.md
-skills/oracle-apex-dev/references/*.md
+skills/oracle-apex-export/SKILL.md
+skills/oracle-apex-object-lock/SKILL.md
+skills/*/references/*.md
 ```
 
 Any agent that can read Markdown instructions and project files can use this material.
 
 ## Codex
 
-Codex recognizes skills under:
+For repository-scoped use, Codex recognizes skills under:
 
 ```text
-~/.codex/skills/
+<project>/.agents/skills/
 ```
 
 Use:
 
 ```bash
-bash scripts/install_codex.sh
+python3 scripts/manage_project_installation.py install \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit>
 ```
+
+The personal/global alternative uses `$HOME/.agents/skills/` through `scripts/install_codex.sh`.
 
 ## Claude Code
 
@@ -51,7 +58,7 @@ bash scripts/install_claude_code.sh
 
 For other agents, the recommendation is:
 
-1. point the agent to `skills/oracle-apex-dev/SKILL.md`;
+1. point the agent to `skills/oracle-apex-ai-skills/SKILL.md`;
 2. make sure it can read `references/`;
 3. make sure it reads `.oracle-apex-ai/project-profile.md` in the consuming project;
 4. adapt only the installation mechanism, not the technical content.

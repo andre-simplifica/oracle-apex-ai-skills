@@ -32,6 +32,8 @@ Use the connection and alias defined in the project profile.
 
 ## PL/SQL Compilation
 
+When DEV is shared, audit the required object-lock runtime, acquire the supported object lock, and run `proc_assert_lock_compilacao` immediately before the compilation. One `PACKAGE` lock covers specification and body.
+
 After compiling, validate:
 
 ```sql
@@ -47,5 +49,7 @@ Do not close as done if a changed object is invalid.
 - Do not pass passwords on the command line.
 - Prefer saved connections.
 - Confirm environment before DDL/DML.
+- Version table and structural DDL in the configured pending-migration directory before applying it.
+- Do not bypass an active cooperative lock with a direct SQLcl compilation.
 - Make `commit` or `rollback` explicit in scripts that change data/metadata.
 - Do not run APEX imports by trial and error.

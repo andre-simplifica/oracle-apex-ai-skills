@@ -3,11 +3,13 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/.." && pwd)"
-target_root="${CODEX_HOME:-${HOME}/.codex}/skills"
+target_root="${HOME}/.agents/skills"
 
 skills=(
+  "oracle-apex-ai-skills"
   "oracle-apex-dev"
   "oracle-apex-export"
+  "oracle-apex-object-lock"
 )
 
 mkdir -p "${target_root}"
@@ -33,4 +35,6 @@ done
 
 echo
 echo "Codex skills installed in: ${target_root}"
-echo "Open a new Codex conversation if the skill list was already loaded."
+echo "This is a personal/global installation."
+echo "For a team project, prefer scripts/manage_project_installation.py."
+echo "Restart Codex only if the updated skill list does not appear automatically."

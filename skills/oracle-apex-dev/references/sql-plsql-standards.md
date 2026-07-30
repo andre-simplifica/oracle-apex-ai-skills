@@ -30,6 +30,10 @@ Use this reference when writing, reviewing, or debugging SQL and PL/SQL for Orac
 
 ## Compilation and Validation
 
+In a shared DEV schema, use `oracle-apex-object-lock` before editing a supported versioned object. Assert the owned active lock immediately before every `create or replace` or compilation.
+
+Write every table or structural DDL change to the pending-migration path from the project profile before applying it.
+
 After changing PL/SQL, validate:
 
 ```sql
@@ -59,6 +63,7 @@ Do not call PL/SQL work complete if changed objects are invalid.
 ## Before Closing
 
 - Compile changed objects.
+- Release every cooperative lock acquired for the task and verify lock residue.
 - Check `user_errors`.
 - Test the main path.
 - Test at least one expected failure path when practical.
