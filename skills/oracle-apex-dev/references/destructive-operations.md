@@ -36,6 +36,8 @@ Before DDL:
 
 - confirm object owner;
 - check dependencies;
+- create the reviewed pending migration for table or structural DDL before execution;
+- acquire and assert cooperative locks for supported versioned objects in shared DEV;
 - avoid dropping/recreating objects when `alter` or `create or replace` is safer;
 - validate invalid objects after the change.
 

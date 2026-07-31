@@ -1,78 +1,129 @@
 # Install in Codex
 
-The simplest path is asking Codex itself to install it using this repository.
+The recommended setup is a repository-scoped installation. Codex scans `.agents/skills` from the current directory up to the repository root, so checked-in skills are available to everyone working in that project.
+
+## Ask Codex to Install It
+
+Open the consuming project and send:
 
 ```text
-Install this Oracle APEX skill for me:
+Install Oracle APEX AI Skills in this project from:
 https://github.com/andre-simplifica/oracle-apex-ai-skills
 
-Use Codex as the target, create the local links, and then help me create my APEX project profile.
-Do not overwrite any existing profile under .oracle-apex-ai/.
+Use the repository-managed .agents/skills installation.
+Inspect and validate the source, run the installation dry-run first, and explain the exact file diff.
+Preserve existing project-owned profiles, patterns, and migrations.
+Do not connect to Oracle, compile objects, import APEX, commit, or push during file installation.
+Afterward, audit the object-lock runtime separately without changing the database.
 ```
 
-If Codex has access to your local terminal, it can run the commands below and explain each step. If you prefer doing it manually, follow this guide.
+Pasting the GitHub URL tells Codex where to fetch the source. It is not a special `@github-url` syntax. After installation, use `@Oracle APEX AI Skills` in ChatGPT/Codex desktop or `$oracle-apex-ai-skills` in Codex CLI and IDE surfaces.
 
-## Step 1: clone the skill repository
+## What Codex Should Do
+
+1. Inspect the consuming repository and current Git status.
+2. Clone or fetch this repository.
+3. Prefer a release tag or explicit commit; record the resolved commit when a branch is requested.
+4. Run `bash scripts/validate_repo.sh` in the source.
+5. Run the install manager with `--dry-run`.
+6. Explain every `CREATE`, `UPDATE`, `PRESERVE`, and conflict.
+7. Run the installation without `--dry-run`.
+8. Run `status` and inspect the consuming-project diff.
+9. Audit the object-lock runtime separately.
+
+## Manual Project Install
+
+Clone a reviewed source:
 
 ```bash
-git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracle-apex-ai-skills
+git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git /tmp/oracle-apex-ai-skills
+git -C /tmp/oracle-apex-ai-skills checkout <tag-or-commit>
+bash /tmp/oracle-apex-ai-skills/scripts/validate_repo.sh
 ```
 
-If the folder already exists:
+Preview:
 
 ```bash
-cd ~/.oracle-apex-ai-skills
-git pull
+python3 /tmp/oracle-apex-ai-skills/scripts/manage_project_installation.py install \
+  --project-root /path/to/your/project \
+  --source-ref <tag-or-commit> \
+  --dry-run
 ```
 
-## Step 2: install the skills in Codex
+Install:
 
 ```bash
-bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
+python3 /tmp/oracle-apex-ai-skills/scripts/manage_project_installation.py install \
+  --project-root /path/to/your/project \
+  --source-ref <tag-or-commit>
 ```
 
-The script creates symbolic links under:
+Verify:
+
+```bash
+python3 /path/to/your/project/Util/scripts/manage_oracle_apex_ai_skills.py \
+  status \
+  --project-root /path/to/your/project
+```
+
+Expected result: `STATUS HEALTHY`.
+
+## Installed Layout
+
+Managed:
 
 ```text
-~/.codex/skills/oracle-apex-dev
-~/.codex/skills/oracle-apex-export
+.agents/skills/oracle-apex-ai-skills/
+.agents/skills/oracle-apex-dev/
+.agents/skills/oracle-apex-export/
+.agents/skills/oracle-apex-object-lock/
+.oracle-apex-ai/compatibility.json
+.oracle-apex-ai/installation-manifest.json
+.oracle-apex-ai/upstream-lock.json
+Util/scripts/manage_oracle_apex_ai_skills.py
 ```
 
-## Step 3: check it
-
-```bash
-ls -l ~/.codex/skills/oracle-apex-dev
-ls -l ~/.codex/skills/oracle-apex-export
-```
-
-The paths should point to:
-
-```text
-~/.oracle-apex-ai-skills/skills/oracle-apex-dev
-~/.oracle-apex-ai-skills/skills/oracle-apex-export
-```
-
-## Step 4: create the project profile
-
-At the root of your APEX project repository:
-
-```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
-```
-
-Then edit:
+Initialized when missing and then owned by the consuming project:
 
 ```text
 .oracle-apex-ai/project-profile.md
+.oracle-apex-ai/app-patterns.md
+.oracle-apex-ai/page-patterns/
+db/migrations/pending/
+db/migrations/applied/
 ```
 
-## Step 5: use it
+Use `--no-project-scaffold` only when the repository already has an intentional alternative layout and its profile documents it.
 
-In a new Codex conversation:
+## Audit Object Locks
 
-```text
-Use the oracle-apex-dev skill to analyze page 10.
-Before proposing a change, read the project profile under .oracle-apex-ai/ and check the example pages.
+File installation does not change Oracle. With a confirmed read-only DEV connection, run:
+
+```bash
+sql -name <dev-connection> \
+  @.agents/skills/oracle-apex-object-lock/assets/database/audit-installation.sql
 ```
 
-If the skill name or description changes, open a new conversation so Codex reloads the skill list.
+The result is `INSTALLED`, `ABSENT`, `PARTIAL`, or `INCOMPATIBLE`. Installing or upgrading the runtime requires separate authorization:
+
+```bash
+sql -name <dev-connection> \
+  @.agents/skills/oracle-apex-object-lock/assets/database/install.sql
+```
+
+Do not run the installer simply because the skill files exist.
+
+## Personal Installation
+
+For local experimentation across projects:
+
+```bash
+git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracle-apex-ai-skills
+bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
+```
+
+This personal symlink mode is secondary. A project-managed installation is easier for a team to review, reproduce, and update.
+
+## Discovery
+
+Codex normally detects skill changes automatically. If a new or updated skill does not appear, restart Codex. Current Codex skill discovery behavior is documented in the [official OpenAI skill guide](https://learn.chatgpt.com/codex/build-skills#where-codex-loads-local-skills).

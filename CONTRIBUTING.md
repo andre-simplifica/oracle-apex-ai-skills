@@ -11,7 +11,9 @@ If a rule depends on a package, page, theme, menu, breadcrumb, naming convention
 ## Where to Contribute
 
 - General APEX, SQLcl, validation, or guardrail improvements: `skills/oracle-apex-dev/`.
-- General export/snapshot improvements: `skills/oracle-apex-export/`.
+- Main routing and installation contract: `skills/oracle-apex-ai-skills/`.
+- Cooperative object-lock behavior and runtime: `skills/oracle-apex-object-lock/`.
+- General baseline/export/snapshot/release improvements: `skills/oracle-apex-export/`.
 - Human-facing guides: `docs/`.
 - Reusable templates: `templates/`.
 - Installation automation: `scripts/`.
@@ -25,6 +27,10 @@ If a rule depends on a package, page, theme, menu, breadcrumb, naming convention
 - Does the rule mention APEX 24.2 or SQLcl when version behavior matters?
 - Does the workflow state when runtime validation is required?
 - Does the local project profile remain separate from the core?
+- Does a project update preserve profiles, patterns, and migrations?
+- Are database runtime installation and file installation still separate?
+- Do shared-DEV compilation rules enforce cooperative object locks?
+- Do structural DDL changes route through pending migrations?
 - Did you read `SECURITY.md` before posting examples, logs, or screenshots?
 - Did you run `bash scripts/validate_repo.sh`?
 

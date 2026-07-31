@@ -13,7 +13,7 @@ fi
 
 git pull --ff-only
 
-if [[ -d "${CODEX_HOME:-${HOME}/.codex}" ]]; then
+if [[ -d "${HOME}/.agents" ]]; then
   bash scripts/install_codex.sh
 fi
 

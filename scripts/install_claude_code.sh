@@ -16,8 +16,10 @@ else
 fi
 
 skills=(
+  "oracle-apex-ai-skills"
   "oracle-apex-dev"
   "oracle-apex-export"
+  "oracle-apex-object-lock"
 )
 
 mkdir -p "${target_root}"

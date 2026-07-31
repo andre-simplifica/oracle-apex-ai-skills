@@ -88,14 +88,23 @@ It helps tools like Codex, Claude Code, and other agents understand how to work 
 
 It is not magic, and it does not replace APEX knowledge. It is a practical playbook for the AI agent helping you.
 
+The repository is a **skill kit**, not an APEX plugin. It contains four focused skills:
+
+| Skill | Responsibility |
+| --- | --- |
+| `oracle-apex-ai-skills` | Main entry point, installation/update contract, and task router |
+| `oracle-apex-dev` | Daily APEX, SQL, PL/SQL, REST, jobs, security, and runtime work |
+| `oracle-apex-object-lock` | Cooperative locks for shared DEV database objects |
+| `oracle-apex-export` | Inspection exports, first baseline, official snapshots, and release exports |
+
+The base kit works on its own. If installed, `build-apex-brand-reports` can add branded reports, help, PDF, and spreadsheet-oriented output; `oracle-apex-echarts` can add self-contained Apache ECharts regions.
+
 ## Supported APEX Versions
 
 | Version | Status |
 | --- | --- |
-| APEX 24.2 | Main target |
-| APEX 24.1 | Likely compatible, validate export behavior and API signatures |
-| APEX 23.2 | Use with caution and validate runtime behavior |
-| APEX older than 23 | Not recommended without adaptation |
+| APEX 24.2 | Verified design target |
+| Any other APEX version | Not verified; validate exports, API signatures, metadata, and runtime behavior before use |
 
 ## Who it is for
 
@@ -109,7 +118,7 @@ This is especially useful if you are an Oracle APEX developer who:
 
 If you are already comfortable with GitHub, terminal scripts, and AI agent internals, start with the more technical docs: [docs/technical-overview.md](docs/technical-overview.md).
 
-## The recommended way
+## The recommended project installation
 
 > [!TIP]
 > **Rule number one: describe more, click less, type less boilerplate.**
@@ -118,19 +127,46 @@ If you are already comfortable with GitHub, terminal scripts, and AI agent inter
 >
 > Your AI tool should become the place where project knowledge is transferred, refined, and reused. The better you describe the intent, the safer and faster the agent can inspect, generate, validate, and document the change.
 
-To install it, open your AI tool and say:
+Commit the skills into each consuming repository under `.agents/skills/`. Codex discovers repository-scoped skills from that directory, so the whole team uses the same reviewed version.
+
+Open Codex in the project and say:
 
 ```text
-I want to use these Oracle APEX AI skills in my project:
+Install Oracle APEX AI Skills in this project from:
 https://github.com/andre-simplifica/oracle-apex-ai-skills
 
-Install them for the AI tool I am using, create the project profile, and explain what I need to fill in.
-Do not overwrite any existing .oracle-apex-ai/ profile.
+Use the repository-managed installation under .agents/skills.
+Inspect the source, run its validation, show me the install dry-run, and explain every file that will be created or updated.
+Preserve every existing project-owned file under .oracle-apex-ai/ and every migration.
+Do not connect to Oracle, compile objects, import APEX, commit, or push as part of the file installation.
+After installation, audit the cooperative object-lock runtime separately and tell me whether it is installed, absent, partial, or incompatible.
 ```
 
-Then let the agent guide you.
+The GitHub address in that request is the download source; it is not a special `@github-url` syntax. After installation, invoke the installed skill with `@Oracle APEX AI Skills` on desktop or `$oracle-apex-ai-skills` in Codex CLI/IDE.
 
-The skill was designed so the agent can install the reusable core and then help you document your own project standards.
+The deterministic project manager records the upstream repository, requested ref, resolved commit, compatibility, and a SHA-256 checksum for every managed file. It refuses to update locally modified managed files.
+
+The install creates or manages:
+
+```text
+.agents/skills/<four-core-skills>/
+.oracle-apex-ai/compatibility.json
+.oracle-apex-ai/installation-manifest.json
+.oracle-apex-ai/upstream-lock.json
+Util/scripts/manage_oracle_apex_ai_skills.py
+```
+
+It initializes missing project-owned files but never overwrites them:
+
+```text
+.oracle-apex-ai/project-profile.md
+.oracle-apex-ai/app-patterns.md
+.oracle-apex-ai/page-patterns/
+db/migrations/pending/
+db/migrations/applied/
+```
+
+Installing skill files does **not** install database objects. The object-lock runtime has its own read-only audit and separately authorized DEV installer.
 
 For daily work, keep talking to the agent like this:
 
@@ -163,16 +199,16 @@ Do not paste secrets into the skill. Use the secure connection setup you already
 
 ## How to use it after installation
 
-You talk to your AI agent naturally:
+In ChatGPT/Codex desktop, select **Oracle APEX AI Skills** with `@`. In Codex CLI or the IDE extension, mention `$oracle-apex-ai-skills`. Natural-language matching also works.
 
 ```text
-Use the oracle-apex-dev skill to inspect page 120 before changing anything.
+Use Oracle APEX AI Skills to inspect page 120 before changing anything.
 ```
 
 ```text
 Create a new APEX page following the pattern of pages 45 and 46.
 Do not copy page 12 because it is legacy.
-Use the oracle-apex-dev skill and read the project profile first.
+Use Oracle APEX AI Skills and read the project profile first.
 ```
 
 ```text
@@ -181,10 +217,32 @@ Check Page Designer, Session State, staging tables, PL/SQL, and runtime behavior
 ```
 
 ```text
-Use oracle-apex-export to guide the APEX export in readable format, split into multiple files.
+The adjustments are finished. Use Oracle APEX AI Skills to generate the release:
+export the complete APEX application being changed, export only the database objects changed by this release, and include the pending DDL migrations.
 ```
 
 The command is not the important part. The important part is giving the agent enough project context and making it follow the same standards your team follows.
+
+### First version versus a normal release
+
+Say **"initialize version 1"** only when complete versioned source does not exist. That mode exports the full APEX application and the full structural DDL of the application schema: tables, constraints, indexes, sequences, types, views, packages, routines, triggers, synonyms, and required explicit grants. It excludes table data, secrets, users, wallets, and unrelated/system schemas.
+
+For normal development, no official export is generated by default. When you say **"the changes are finished; generate the release export"**, the skill generates the complete application snapshot plus the changed database objects and pending structural migrations.
+
+### Cooperative object locks
+
+The kit ships `DEV_OBJECT_LOCK`, two indexes, two operational views, and `PK_DEV_OBJECT_LOCK`. The runtime is cooperative: compliant developers and agents acquire, assert, renew, and release locks; arbitrary manual DDL outside the workflow can bypass it.
+
+Before editing or compiling a supported object in shared DEV, the agent must:
+
+1. refresh and verify the Git base;
+2. inspect active and recent locks;
+3. acquire the object lock;
+4. assert ownership immediately before every compilation;
+5. renew long tasks;
+6. release the lock with the final SHA or abandonment reason.
+
+One `PACKAGE` lock covers both specification and body.
 
 ## Keep your project standards outside the core
 
@@ -251,23 +309,25 @@ These skills are just versioned content: Markdown, templates, and helper scripts
 
 ## Manual setup
 
-If you want the manual route:
+For a repository-managed Codex installation, clone a reviewed tag or commit and run a dry-run first:
+
+```bash
+git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git /tmp/oracle-apex-ai-skills
+git -C /tmp/oracle-apex-ai-skills checkout <tag-or-commit>
+python3 /tmp/oracle-apex-ai-skills/scripts/manage_project_installation.py install \
+  --project-root /path/to/your/project \
+  --source-ref <tag-or-commit> \
+  --dry-run
+python3 /tmp/oracle-apex-ai-skills/scripts/manage_project_installation.py install \
+  --project-root /path/to/your/project \
+  --source-ref <tag-or-commit>
+```
+
+For a personal/global installation instead:
 
 ```bash
 git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracle-apex-ai-skills
 bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
-```
-
-For Claude Code:
-
-```bash
-bash ~/.oracle-apex-ai-skills/scripts/install_claude_code.sh
-```
-
-Inside your APEX project:
-
-```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
 ```
 
 For more detail, read:
@@ -279,34 +339,41 @@ For more detail, read:
 
 ## Keep the skills up to date
 
-This repository will evolve. When new guardrails, examples, or references are added here, refresh your local skill installation so your AI tool uses the latest version.
+Updates are explicit, reviewable project changes. They do not touch project-owned standards or the database.
 
 Ask your AI:
 
 ```text
-Refresh my local Oracle APEX AI skills from:
+Oracle APEX AI Skills was updated. Update this project from:
 https://github.com/andre-simplifica/oracle-apex-ai-skills
 
-Keep my project-specific files under .oracle-apex-ai/ unchanged.
-Explain what changed after the update.
+Compare the installed commit with the requested upstream tag/commit.
+Run status, check, and update --dry-run first.
+Show the exact managed-file diff and stop if a managed file was changed locally.
+Preserve .oracle-apex-ai/project-profile.md, app-patterns, page-patterns, and all migrations.
+Do not change Oracle, import APEX, commit, or push automatically.
 ```
 
-If you prefer the manual route:
+Manual status:
 
 ```bash
-cd ~/.oracle-apex-ai-skills
-bash scripts/update_core.sh
+python3 Util/scripts/manage_oracle_apex_ai_skills.py status --project-root .
 ```
+
+Use a freshly fetched upstream manager for `check` and `update`, following [docs/update-and-contribute.md](docs/update-and-contribute.md).
 
 ## What's included
 
+- `skills/oracle-apex-ai-skills`: umbrella installer, updater contract, and router.
 - `skills/oracle-apex-dev`: main APEX development skill.
-- `skills/oracle-apex-export`: APEX export/snapshot skill.
+- `skills/oracle-apex-object-lock`: cooperative shared-DEV lock skill and complete SQL runtime.
+- `skills/oracle-apex-export`: APEX baseline, snapshot, database-source, and release skill.
 - `skills/oracle-apex-dev/references/`: detailed references for REST, SQL/PLSQL, debugging, jobs, security, and destructive operations.
-- `templates/`: project profile templates.
-- `scripts/`: install, update, profile creation, and validation helpers.
+- `templates/`: project profile and compatibility templates.
+- `schemas/`: machine-readable installation, upstream-lock, and compatibility contracts.
+- `scripts/manage_project_installation.py`: deterministic project install/update manager.
+- `scripts/`: personal install, profile creation, and repository validation helpers.
 - `docs/`: human-oriented guides.
-- `docs/examples/`: fictional examples safe to copy and adapt.
 - `SECURITY.md`: public safety rules for issues, PRs, screenshots, logs, and examples.
 - `.github/`: issue and pull request templates.
 - `CHANGELOG.md`: public change history.

@@ -10,10 +10,13 @@ It is the contract between your APEX application and the generic skill.
 
 ## Step 1: create the profile
 
-At the root of your project:
+The repository-managed installer creates the profile when it is missing:
 
 ```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
+python3 /path/to/oracle-apex-ai-skills/scripts/manage_project_installation.py \
+  install \
+  --project-root /path/to/project \
+  --source-ref <tag-or-commit>
 ```
 
 This creates:
@@ -22,7 +25,11 @@ This creates:
 .oracle-apex-ai/project-profile.md
 .oracle-apex-ai/app-patterns.md
 .oracle-apex-ai/page-patterns/.gitkeep
+db/migrations/pending/.gitkeep
+db/migrations/applied/.gitkeep
 ```
+
+It does not overwrite any of these project-owned files.
 
 ## Step 2: fill in the basics
 
@@ -38,6 +45,11 @@ In `project-profile.md`, fill in:
 - authentication pattern for internal/private APIs, using placeholders when needed;
 - default branch;
 - how changes are published.
+- object-lock runtime audit/install commands and actor naming;
+- official APEX snapshot and database source paths;
+- pending and applied migration lifecycle;
+- baseline and release publication rules;
+- optional Brand Report Kit or ECharts usage.
 
 ## Step 3: document screen patterns
 
@@ -85,6 +97,8 @@ The profile should live in the consuming project's Git repository. This way all 
 
 ```bash
 git add .oracle-apex-ai/
+git add .agents/skills/ Util/scripts/manage_oracle_apex_ai_skills.py
+git add db/migrations/
 git commit -m "Add APEX AI project profile"
 git push
 ```

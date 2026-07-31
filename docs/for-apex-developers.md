@@ -30,6 +30,8 @@ The skill does not replace engineering judgment. It should not:
 - hide compilation errors;
 - ignore the visual standard of the project.
 
+Installing the skill files does not install database objects. The lock runtime is cooperative rather than a hard Oracle DDL block. The kit also does not create an official export, apply pending DDL, or import APEX unless that separate operation is explicitly requested.
+
 ## Daily usage
 
 Example prompts:
@@ -51,6 +53,10 @@ Before changing anything, check Session State, staging, and runtime.
 Use the oracle-apex-export skill to update the APEX application snapshot.
 ```
 
+When a shared DEV package, view, trigger, procedure, function, type, or synonym is involved, the agent should audit the lock runtime, refresh Git, acquire the object lock, and assert ownership before compilation.
+
+When structural DDL is involved, the change should first be versioned under the pending-migration path from the project profile.
+
 ## How to get more value
 
 You get more value when your AI tool can see your project and, when possible, connect to your database/APEX environment.
@@ -71,13 +77,7 @@ If there is no database connection, that is still useful. The AI agent can revie
 
 ## What you need to fill in your project
 
-After installation, run:
-
-```bash
-bash ~/.oracle-apex-ai-skills/scripts/init_project_profile.sh
-```
-
-Then edit:
+The repository-managed installer initializes the profile when it is missing. Then edit:
 
 ```text
 .oracle-apex-ai/project-profile.md
@@ -98,6 +98,10 @@ Fill it with how your application actually works:
 - dialog pattern;
 - example pages;
 - mandatory validations.
+- object-lock runtime and actor policy;
+- official APEX/database export paths;
+- pending migration lifecycle;
+- release publication rules.
 
 The better this file is, the better the agent works.
 

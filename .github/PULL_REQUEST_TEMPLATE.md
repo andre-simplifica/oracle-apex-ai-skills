@@ -7,7 +7,9 @@ Describe what changed and why.
 ## Scope
 
 - [ ] Generic APEX development guidance
-- [ ] Export/snapshot guidance
+- [ ] Project installation/update and routing
+- [ ] Cooperative object-lock runtime/workflow
+- [ ] Baseline/export/snapshot/release guidance
 - [ ] Project-profile template
 - [ ] Install/update scripts
 - [ ] Documentation
@@ -20,6 +22,9 @@ Describe what changed and why.
 - [ ] This change does not include production data, dumps, screenshots, payloads, or logs with sensitive content.
 - [ ] Project-specific rules stayed in project-profile examples or docs and were not added as universal core rules.
 - [ ] Any APEX version assumptions are explicit.
+- [ ] File installation does not silently mutate Oracle.
+- [ ] Project-owned profiles, patterns, and migrations remain preserved.
+- [ ] Structural DDL uses the pending-migration workflow.
 - [ ] I ran `bash scripts/validate_repo.sh`.
 
 ## Notes for Reviewers

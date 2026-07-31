@@ -31,6 +31,14 @@ If your project profile contains private URLs, real workspace names, schema name
 
 Do not copy a filled project profile into this public repository.
 
+## Installation and Lock Metadata
+
+Use a credential helper, SSH agent, or other approved Git authentication. Do not pass credentials in `--source-repository`; the project manager removes URL user information and query strings from recorded metadata, but a command-line value may still appear in shell history or process inspection.
+
+`DEV_OBJECT_LOCK` records actor, branch, task reference, context, and repository SHAs in the application schema. Keep those fields short and operational. Do not put passwords, tokens, customer data, private payloads, or sensitive incident details in lock metadata.
+
+Installing file-based skills does not authorize a database connection. Audit the object-lock runtime read-only first, then obtain explicit authorization before executing its DEV installer.
+
 ## Reporting a Security Issue
 
 If you find a security problem in these skills or helper scripts, do not disclose private details in a public issue.
