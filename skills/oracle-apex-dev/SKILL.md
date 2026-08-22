@@ -22,7 +22,7 @@ Do not put conventions from one specific application into this skill core.
 1. Read current repository instructions (`AGENTS.md`, `CLAUDE.md`, `README`, or equivalent), if present.
 2. Read `.oracle-apex-ai/project-profile.md`, if present.
 3. When the request involves a new screen, visual flow, or UI pattern, read `.oracle-apex-ai/app-patterns.md` and the referenced example pages.
-4. Confirm environment, app id, workspace, schema, and SQLcl connection before any technical execution.
+4. Confirm environment, app id, workspace, schema, and the configured SQLcl connection before technical execution. Before query, compile, import, or export, verify both `USER` and `SERVICE_NAME`; do not continue on a plausible-but-unconfirmed connection.
 5. Inspect `.oracle-apex-ai/installation-manifest.json` and the object-lock section of the project profile.
 6. If essential context is missing, state the limitation and ask or perform read-only inspection.
 
@@ -33,10 +33,11 @@ Do not put conventions from one specific application into this skill core.
 - Use SQLcl for queries, validation, PL/SQL compilation, metadata inspection, and read-only exports.
 - Use Object Browser as a fallback when SQLcl is unavailable or when the project requires the Builder UI.
 - Do not edit versioned APEX exports as the default implementation path; use them as functional reference.
+- Do not generate or refresh an official APEX/database export unless the user explicitly requests publication/export.
 - When changing versioned PL/SQL for implementation, bug fix, or test work, compile in DEV and validate errors unless the user or environment blocks it.
 - In a shared DEV schema, use `oracle-apex-object-lock` before editing or compiling every supported versioned database object. Acquire before editing, assert immediately before compilation, renew when needed, and release at closeout.
 - Treat one `PACKAGE` lock as covering both its specification and body.
-- Put every table or structural DDL change in the pending migration directory defined by the project profile before applying it.
+- Put table/structural DDL and reviewed DML in the two configured pending files before applying them. Never put APEX components or standalone package/view/trigger/routine/type/synonym source in pending.
 - When the user asks only for a plan, review, explanation, or direction, do not change the database without explicit authorization.
 - Runtime validation is required for any visual or functional screen change.
 - User-visible text must use business language and must not expose internal technical names.
@@ -49,6 +50,7 @@ Do not put conventions from one specific application into this skill core.
 - **Project profile**: read `.oracle-apex-ai/project-profile.md`; if it does not exist, use [project-profile.md](references/project-profile.md) to guide creation.
 - **Learned patterns**: read [apex-pattern-learning.md](references/apex-pattern-learning.md) and `.oracle-apex-ai/app-patterns.md`.
 - **Page Designer**: follow [page-designer.md](references/page-designer.md).
+- **Dynamic Content and package-owned UI**: follow [dynamic-content-regions.md](references/dynamic-content-regions.md) for branded/non-standard layouts, filters, dashboard actions, exports, and reusable `RETURN CLOB` regions.
 - **SQLcl**: follow [sqlcl.md](references/sqlcl.md).
 - **SQL/PLSQL standards**: follow [sql-plsql-standards.md](references/sql-plsql-standards.md) before writing or reviewing database code.
 - **REST integrations**: follow [rest-integrations.md](references/rest-integrations.md) before creating, changing, or debugging outbound APIs, OAuth, webhooks, or OpenAPI-backed flows.
@@ -74,9 +76,9 @@ Do not put conventions from one specific application into this skill core.
 7. Apply changes in small, validatable units.
 8. Assert owned locks immediately before each shared DEV compilation, then save the page and/or compile objects.
 9. Validate runtime behavior in the application.
-10. Create or update pending migration files for structural DDL.
+10. Create or update the configured pending DDL/DML files when applicable; keep APEX and standalone object source out.
 11. Release owned locks and verify task lock residue.
-12. Update documentation/profile/patterns when the change reveals a reusable rule.
+12. When the user declares a reusable standard, inspect its real example and record it in project-owned profile/pattern files before relying on it for later pages.
 13. Generate an official export only when explicitly requested.
 14. If the project uses Git and local rules allow it, commit/push only the current task scope.
 

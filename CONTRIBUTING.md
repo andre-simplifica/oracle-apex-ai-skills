@@ -30,7 +30,11 @@ If a rule depends on a package, page, theme, menu, breadcrumb, naming convention
 - Does a project update preserve profiles, patterns, and migrations?
 - Are database runtime installation and file installation still separate?
 - Do shared-DEV compilation rules enforce cooperative object locks?
-- Do structural DDL changes route through pending migrations?
+- Does the project keep one pending root with exactly one DDL file and one DML file?
+- Are APEX components and standalone package/view/trigger/routine/type/synonym source excluded from pending?
+- Do full and partial database exports keep the five-file release contract and explicit snapshot lineage?
+- Are retention and database cleanup report-only unless separately configured and authorized?
+- Are new project-owned standards recorded in the consuming project's patterns instead of the generic core?
 - Did you read `SECURITY.md` before posting examples, logs, or screenshots?
 - Did you run `bash scripts/validate_repo.sh`?
 

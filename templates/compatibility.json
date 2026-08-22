@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "kit": "oracle-apex-ai-skills",
+  "kit_version": "1.1.0",
   "apex": {
     "target": "24.2",
     "verified": [
@@ -9,7 +10,7 @@
     "other_versions": "Validate export behavior, API signatures, and runtime behavior before use."
   },
   "database": {
-    "object_lock_runtime_required": "1.0.0",
+    "object_lock_runtime_required": "1.1.0",
     "object_lock_mode": "cooperative"
   },
   "core_skills": [
@@ -21,5 +22,9 @@
   "optional_skills": [
     "build-apex-brand-reports",
     "oracle-apex-echarts"
-  ]
+  ],
+  "optional_companion_repositories": {
+    "build-apex-brand-reports": "https://github.com/andre-simplifica/oracle-apex-brand-report-kit",
+    "oracle-apex-echarts": "https://github.com/andre-simplifica/oracle-apex-echarts"
+  }
 }

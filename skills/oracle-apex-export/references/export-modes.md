@@ -7,7 +7,8 @@
 | Inspect a page/component | `temporary-inspection` | Full or component export needed for inspection | None by default | No |
 | Create version 1 / first export | `initial-baseline` | Complete application | Complete application-schema structure | Yes |
 | Refresh official app source only | `application-snapshot` | Complete application | None | Yes |
-| Changes complete / prepare release | `release` | Complete application | Changed DB objects + pending DDL | Yes |
+| Changes complete / prepare partial release | `release` | Complete application | Objects changed from one explicit base snapshot + pending DDL/DML | Yes |
+| Create a full database-object release | `release` | Complete application | All supported objects in one confirmed snapshot + pending DDL/DML | Yes |
 | SQLcl export unavailable | `builder-fallback` | As permitted by profile | Separate database process | Depends on original intent |
 
 ## Temporary Inspection
@@ -42,7 +43,8 @@ Produce:
 
 - complete official export of the application being changed;
 - versioned source for database objects changed by the release;
-- every applicable pending structural migration;
+- the canonical five-file database bundle in full or partial scope;
+- every applicable pending DDL and DML fragment;
 - release inventory explaining what changed and what was excluded.
 
 Use Git history, task scope, owned locks, pending migrations, and DEV object comparison as evidence. Do not export unrelated DEV drift.
@@ -53,6 +55,11 @@ objects. Capture the database source boundary once and generate every full
 release artifact from the same confirmed snapshot ID. Use
 [parallel-export.md](parallel-export.md) when the canonical workflow supports
 coordinated APEX and database workers.
+
+For a partial release, compare normalized object identity and DDL hash against
+one explicit base snapshot. Use the same five-file layout as full scope, add
+`partial` to filenames and headers, and record the base snapshot. Never infer a
+drop from an object missing in the current snapshot.
 
 ## Builder Fallback
 

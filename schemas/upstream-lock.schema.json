@@ -19,6 +19,10 @@
     "kit": {
       "const": "oracle-apex-ai-skills"
     },
+    "kit_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
     "installed_at": {
       "type": "string",
       "format": "date-time"

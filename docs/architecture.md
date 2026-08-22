@@ -43,6 +43,10 @@ The project manager also writes:
 .oracle-apex-ai/upstream-lock.json
 .oracle-apex-ai/compatibility.json
 Util/scripts/manage_oracle_apex_ai_skills.py
+Util/scripts/check_oracle_apex_pending.py
+Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/validate_oracle_apex_export.py
+Util/scripts/validate_oracle_apex_release_bundle.py
 ```
 
 These are managed files. Their checksums make local drift visible and prevent a silent overwrite during update.
@@ -55,9 +59,12 @@ Each consuming project owns:
 .oracle-apex-ai/project-profile.md
 .oracle-apex-ai/app-patterns.md
 .oracle-apex-ai/page-patterns/
+.oracle-apex-ai/export-policy.json
+db/migrations/pending/pending_ddl.sql
+db/migrations/pending/pending_dml.sql
 ```
 
-The profile defines application IDs, environments, safe connection commands, UI patterns, code ownership, official export paths, pending-migration paths, and release rules. The reusable core never replaces it.
+The profile defines application IDs, expected Oracle user/service identity, safe connection commands, UI patterns, code ownership, official export paths, pending-migration paths, and release rules. The export policy defines machine-readable output and retention behavior. The reusable core never replaces either file during update.
 
 This separation allows one application to use an Inline Dialog for help while another uses a drawer without turning either convention into a universal rule.
 
@@ -82,6 +89,8 @@ File installation and database installation are intentionally separate:
 Install/update skills -> audit runtime -> request DEV authorization -> install/validate runtime
 ```
 
+Runtime 1.1 also supplies explicit history purge and guarded uninstall scripts. Force parameters remain for call compatibility but are rejected because this cooperative shared-schema runtime cannot prove administrative authority.
+
 ## Versioned Database Source
 
 The first baseline and normal releases are different:
@@ -89,16 +98,19 @@ The first baseline and normal releases are different:
 | Mode | APEX source | Database source |
 | --- | --- | --- |
 | Initial baseline | Complete application | Complete application-schema structure |
-| Daily development | No official export by default | Canonical object edits + pending DDL |
-| Release | Complete application | Changed objects + pending DDL |
+| Daily development | No official export by default | Canonical object edits + pending DDL/DML |
+| Partial release | Complete split/readable/monolithic application | Five files with new/changed objects from one base snapshot + pending DDL/DML |
+| Full release | Complete split/readable/monolithic application | Five files with all supported objects + pending DDL/DML |
 
-Every structural change starts in `db/migrations/pending/` or the path defined by the project. Release generation does not mark migrations as applied.
+Pending is one directory with exactly two configured files. Table/constraint/index/sequence structural changes use the DDL file; reviewed corrections/backfills/seed data use the DML file. APEX components and standalone object source never go there. Release generation does not mark either file as applied.
+
+Repository export retention is report-only by default. Database snapshot cleanup only emits reviewable SQL for a project-confirmed compatible runtime and never connects automatically.
 
 ## Optional Skills
 
 The core works alone. When present:
 
-- `build-apex-brand-reports` owns branded report/help/PDF/spreadsheet workflows;
-- `oracle-apex-echarts` owns Apache ECharts region workflows.
+- [Oracle APEX Brand Report Kit](https://github.com/andre-simplifica/oracle-apex-brand-report-kit) owns branded report/help/browser-PDF/spreadsheet workflows;
+- [Oracle APEX ECharts](https://github.com/andre-simplifica/oracle-apex-echarts) owns Apache ECharts region workflows.
 
 The router may recommend them but must not require, copy, or update them as part of this kit.

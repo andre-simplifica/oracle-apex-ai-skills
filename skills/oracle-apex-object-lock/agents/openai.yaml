@@ -1,7 +1,7 @@
 interface:
   display_name: "Oracle APEX Object Lock"
-  short_description: "Coordinate shared Oracle DEV object changes"
-  default_prompt: "Use $oracle-apex-object-lock to install, verify, and enforce cooperative object locks in shared Oracle DEV."
+  short_description: "Audit and coordinate shared Oracle DEV object locks"
+  default_prompt: "Use $oracle-apex-object-lock to audit, install, enforce, retain, or uninstall the cooperative shared-DEV runtime with separate database authorization."
 
 policy:
   allow_implicit_invocation: true

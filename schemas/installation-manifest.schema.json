@@ -37,6 +37,9 @@
         "object_lock_runtime_required"
       ],
       "properties": {
+        "kit_version": {
+          "type": "string"
+        },
         "apex_target": {
           "type": "string"
         },

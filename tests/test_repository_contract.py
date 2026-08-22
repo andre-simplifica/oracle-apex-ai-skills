@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
 
@@ -52,6 +55,8 @@ class RepositoryContractTests(unittest.TestCase):
             "install.sql",
             "audit-installation.sql",
             "validate-installation.sql",
+            "purge-history.sql",
+            "uninstall.sql",
             "packages/pk_dev_object_lock.pks",
             "packages/pk_dev_object_lock.pkb",
         }
@@ -63,7 +68,13 @@ class RepositoryContractTests(unittest.TestCase):
                 if path.is_file()
             },
         )
-        for relative in ("install.sql", "audit-installation.sql", "validate-installation.sql"):
+        for relative in (
+            "install.sql",
+            "audit-installation.sql",
+            "validate-installation.sql",
+            "purge-history.sql",
+            "uninstall.sql",
+        ):
             script = (root / relative).read_text(encoding="utf-8").lower()
             self.assertIn("whenever sqlerror exit", script)
             self.assertRegex(script, r"(?m)^exit success$")
@@ -78,6 +89,7 @@ class RepositoryContractTests(unittest.TestCase):
         for symbol in (
             "func_runtime_version",
             "proc_expirar_locks",
+            "proc_purgar_historico",
             "proc_adquirir_lock",
             "proc_renovar_lock",
             "proc_liberar_lock",
@@ -87,6 +99,9 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(symbol, spec.lower())
             self.assertIn(symbol, body.lower())
+        self.assertIn("l_flag in ('s', 'y', 'sim', 'yes', 'true', '1')", body.lower())
+        self.assertIn("dev_object_lock.object_name%type", body.lower())
+        self.assertIn("dev_object_lock.locked_by%type", body.lower())
         install = (root / "install.sql").read_text(encoding="utf-8")
         for included in re.findall(r"(?m)^@@(.+)$", install):
             self.assertTrue(
@@ -103,7 +118,12 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(compatibility["apex"]["target"], "24.2")
         self.assertEqual(set(compatibility["core_skills"]), EXPECTED_SKILLS)
         self.assertEqual(
-            compatibility["database"]["object_lock_runtime_required"], "1.0.0"
+            compatibility["database"]["object_lock_runtime_required"], "1.1.0"
+        )
+        self.assertEqual(compatibility["kit_version"], "1.1.0")
+        self.assertEqual(
+            (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip(),
+            compatibility["kit_version"],
         )
 
     def test_export_skill_defines_baseline_release_and_pending(self) -> None:
@@ -121,8 +141,105 @@ class RepositoryContractTests(unittest.TestCase):
             "monolithic",
             "parallel-export.md",
             "same confirmed snapshot",
+            "release-bundle.md",
+            "partial",
+            "pending ddl/dml",
+            "export-retention.md",
         ):
             self.assertIn(term, combined)
+
+    def test_project_export_policy_has_five_file_and_pending_contract(self) -> None:
+        policy = json.loads(
+            (REPO_ROOT / "templates" / "export-policy.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            policy["database_release"]["five_file_groups"],
+            [
+                "package_specs",
+                "views",
+                "package_bodies",
+                "triggers",
+                "compile_objects",
+            ],
+        )
+        self.assertEqual(policy["pending"]["ddl_file"], "pending_ddl.sql")
+        self.assertEqual(policy["pending"]["dml_file"], "pending_dml.sql")
+        self.assertFalse(policy["pending"]["allow_apex_components"])
+        self.assertFalse(policy["pending"]["allow_standalone_object_source"])
+
+    def test_managed_export_tools_are_present(self) -> None:
+        for relative in (
+            "scripts/check_pending_migrations.py",
+            "scripts/manage_export_retention.py",
+            "scripts/validate_apex_export.py",
+            "scripts/validate_release_bundle.py",
+        ):
+            self.assertTrue((REPO_ROOT / relative).is_file())
+
+    def test_personal_codex_installer_uses_current_user_location(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env.pop("CODEX_HOME", None)
+            result = subprocess.run(
+                ["bash", str(REPO_ROOT / "scripts" / "install_codex.sh")],
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            for skill in EXPECTED_SKILLS:
+                installed = home / ".agents" / "skills" / skill
+                self.assertTrue(installed.is_symlink())
+                self.assertEqual(
+                    (REPO_ROOT / "skills" / skill).resolve(),
+                    installed.resolve(),
+                )
+            self.assertFalse((home / ".codex" / "skills").exists())
+
+    def test_personal_codex_installer_migrates_legacy_copy_only_with_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            legacy = home / ".codex" / "skills" / "oracle-apex-dev"
+            legacy.mkdir(parents=True)
+            (legacy / "marker.txt").write_text("legacy", encoding="utf-8")
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env.pop("CODEX_HOME", None)
+            command = ["bash", str(REPO_ROOT / "scripts" / "install_codex.sh")]
+
+            refused = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(0, refused.returncode)
+            self.assertTrue((legacy / "marker.txt").is_file())
+
+            migrated = subprocess.run(
+                [*command, "--replace-existing"],
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, migrated.returncode, migrated.stderr)
+            self.assertFalse(legacy.exists())
+            backups = list(
+                (home / ".agents" / "skill-backups").glob(
+                    "oracle-apex-ai-skills-*/legacy-codex-skills/oracle-apex-dev/marker.txt"
+                )
+            )
+            self.assertEqual(1, len(backups))
 
     def test_local_markdown_links_resolve(self) -> None:
         markdown_files = [

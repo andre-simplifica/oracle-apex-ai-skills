@@ -40,7 +40,7 @@ bash -n scripts/*.sh
 repo_pycache_dir="${repo_root}/.tmp/pycache"
 mkdir -p "${repo_pycache_dir}"
 PYTHONPYCACHEPREFIX="${repo_pycache_dir}" \
-  python3 -m py_compile scripts/manage_project_installation.py tests/*.py
+  python3 -m py_compile scripts/*.py tests/*.py
 PYTHONPYCACHEPREFIX="${repo_pycache_dir}" \
   python3 -m unittest discover -s tests -v
 

@@ -161,7 +161,13 @@ class ProjectInstallationTests(unittest.TestCase):
         profile = self.project / ".oracle-apex-ai" / "project-profile.md"
         self.assertTrue(profile.is_file())
         self.assertTrue(
-            (self.project / "db" / "migrations" / "pending" / ".gitkeep").is_file()
+            (self.project / ".oracle-apex-ai" / "export-policy.json").is_file()
+        )
+        self.assertTrue(
+            (self.project / "db" / "migrations" / "pending" / "pending_ddl.sql").is_file()
+        )
+        self.assertTrue(
+            (self.project / "db" / "migrations" / "pending" / "pending_dml.sql").is_file()
         )
         self.assertTrue(
             (
@@ -183,6 +189,14 @@ class ProjectInstallationTests(unittest.TestCase):
         self.assertNotIn(
             ".oracle-apex-ai/project-profile.md", manifest["managed_files"]
         )
+        self.assertEqual(manifest["compatibility"]["kit_version"], "1.1.0")
+        for tool in (
+            "check_oracle_apex_pending.py",
+            "manage_oracle_apex_export_retention.py",
+            "validate_oracle_apex_export.py",
+            "validate_oracle_apex_release_bundle.py",
+        ):
+            self.assertTrue((self.project / "Util" / "scripts" / tool).is_file())
 
         status = run_manager(
             "status",
@@ -230,6 +244,15 @@ class ProjectInstallationTests(unittest.TestCase):
         self.assertEqual(
             pending.read_text(encoding="utf-8"),
             "-- existing pending migration\n",
+        )
+        self.assertFalse(
+            (self.project / ".oracle-apex-ai" / "export-policy.json").exists()
+        )
+        self.assertFalse(
+            (pending.parent / "pending_ddl.sql").exists()
+        )
+        self.assertFalse(
+            (pending.parent / "pending_dml.sql").exists()
         )
 
     def test_install_refuses_existing_core_skill_directory(self) -> None:
@@ -312,6 +335,37 @@ class ProjectInstallationTests(unittest.TestCase):
                 / "SKILL.md"
             ).read_text(encoding="utf-8"),
         )
+
+    def test_update_preserves_all_project_owned_customizations(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+        custom_files = {
+            ".oracle-apex-ai/project-profile.md": "custom profile\n",
+            ".oracle-apex-ai/app-patterns.md": "custom patterns\n",
+            ".oracle-apex-ai/export-policy.json": '{"custom": true}\n',
+            ".oracle-apex-ai/page-patterns/p00100.md": "custom page\n",
+            "db/migrations/pending/pending_ddl.sql": "-- custom ddl\n",
+            "db/migrations/pending/pending_dml.sql": "-- custom dml\n",
+            "db/migrations/applied/kept.sql": "-- applied history\n",
+        }
+        for relative, content in custom_files.items():
+            path = self.project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+
+        run_manager(
+            "update",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+            "--initialize-missing-project-files",
+        )
+        for relative, content in custom_files.items():
+            self.assertEqual(content, (self.project / relative).read_text(encoding="utf-8"))
 
     def test_update_refuses_modified_managed_file(self) -> None:
         run_manager(
@@ -399,6 +453,128 @@ class ProjectInstallationTests(unittest.TestCase):
             *self.source_arguments(self.source),
         )
         self.assertFalse(installed_obsolete.exists())
+
+    def test_doctor_reports_current_project_contract(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+
+        completed = run_manager(
+            "doctor",
+            "--project-root",
+            str(self.project),
+        )
+        self.assertIn("PROJECT_PROFILE_VERSION 2 OK", completed.stdout)
+        self.assertIn("EXPORT_POLICY VALID", completed.stdout)
+        self.assertIn("DOCTOR READY count=0", completed.stdout)
+
+    def test_doctor_reports_invalid_project_owned_export_policy(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+        policy_path = self.project / ".oracle-apex-ai" / "export-policy.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["pending"]["allow_apex_components"] = True
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+        completed = run_manager(
+            "doctor",
+            "--project-root",
+            str(self.project),
+        )
+        self.assertIn("ADVISORY export_policy_invalid", completed.stdout)
+        self.assertIn("DOCTOR ADVISORY", completed.stdout)
+
+    def test_update_can_initialize_only_missing_project_owned_files(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+            "--no-project-scaffold",
+        )
+        self.assertFalse(
+            (self.project / ".oracle-apex-ai" / "project-profile.md").exists()
+        )
+
+        dry_run = run_manager(
+            "update",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+            "--initialize-missing-project-files",
+            "--dry-run",
+        )
+        self.assertIn(
+            "ACTION CREATE_PROJECT_FILE .oracle-apex-ai/export-policy.json",
+            dry_run.stdout,
+        )
+        self.assertFalse(
+            (self.project / ".oracle-apex-ai" / "export-policy.json").exists()
+        )
+
+        run_manager(
+            "update",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+            "--initialize-missing-project-files",
+        )
+        self.assertTrue(
+            (self.project / ".oracle-apex-ai" / "export-policy.json").is_file()
+        )
+        self.assertTrue(
+            (
+                self.project
+                / "db"
+                / "migrations"
+                / "pending"
+                / "pending_ddl.sql"
+            ).is_file()
+        )
+
+    def test_update_accepts_pre_1_1_manifest_and_adds_managed_helpers(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+
+        manifest_path = (
+            self.project / ".oracle-apex-ai" / "installation-manifest.json"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        new_helpers = {
+            "Util/scripts/check_oracle_apex_pending.py",
+            "Util/scripts/manage_oracle_apex_export_retention.py",
+            "Util/scripts/validate_oracle_apex_export.py",
+            "Util/scripts/validate_oracle_apex_release_bundle.py",
+        }
+        for relative in new_helpers:
+            manifest["managed_files"].pop(relative)
+            (self.project / relative).unlink()
+        manifest["compatibility"].pop("kit_version", None)
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        completed = run_manager(
+            "update",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+        self.assertIn("RESULT INSTALLATION_UPDATED", completed.stdout)
+        for relative in new_helpers:
+            self.assertTrue((self.project / relative).is_file())
 
 
 if __name__ == "__main__":

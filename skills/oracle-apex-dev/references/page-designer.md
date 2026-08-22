@@ -16,7 +16,8 @@ Use Page Designer for focused visual and functional changes in APEX pages.
 - Apply the change in Page Designer UI.
 - Save the page.
 - Avoid technical names in user-visible text.
-- Prefer native APEX components when they solve the problem.
+- Prefer native APEX components when they solve the problem cleanly.
+- Actively consider a package-backed Dynamic Content region when a branded or non-standard layout, coordinated filters, clickable dashboard actions, custom grouping, or print/export behavior would otherwise become rigid or duplicated. Follow [dynamic-content-regions.md](dynamic-content-regions.md).
 
 ## Before Closing
 

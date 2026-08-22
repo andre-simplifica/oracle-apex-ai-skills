@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "apex": {
+    "official_export_scope": "complete-application",
+    "require_split_sql": true,
+    "require_readable_yaml": true,
+    "require_monolithic_sql": true,
+    "require_editable_build_status": true,
+    "supporting_objects": "project-defined"
+  },
+  "database_release": {
+    "default_scope": "partial",
+    "full_scope_label": "full",
+    "partial_scope_label": "partial",
+    "output_directory": "db/releases",
+    "filename_pattern": "snapshot_{snapshot_id}_{scope}_{order}_{group}.sql",
+    "five_file_groups": [
+      "package_specs",
+      "views",
+      "package_bodies",
+      "triggers",
+      "compile_objects"
+    ],
+    "compile_routine": null
+  },
+  "pending": {
+    "directory": "db/migrations/pending",
+    "ddl_file": "pending_ddl.sql",
+    "dml_file": "pending_dml.sql",
+    "allow_apex_components": false,
+    "allow_standalone_object_source": false
+  },
+  "retention": {
+    "review_every_releases": 5,
+    "repository_releases": {
+      "mode": "report",
+      "keep_latest": 10,
+      "directory_name_pattern": "^\\d{4}-\\d{2}-\\d{2}(?:[_-].*)?$"
+    },
+    "database_snapshots": {
+      "enabled": false,
+      "package": "PK_DDL_SNAPSHOT",
+      "keep_months": 6,
+      "keep_scripts": 30
+    }
+  }
+}

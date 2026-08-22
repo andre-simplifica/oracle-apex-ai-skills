@@ -10,8 +10,12 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         p_object_type in varchar2
     ) return varchar2
     is
-        l_tipo varchar2(30) := upper(trim(p_object_type));
+        l_tipo varchar2(32767) := upper(trim(p_object_type));
     begin
+        if length(l_tipo) > 30 then
+            raise_application_error(-20097, 'Tipo de objeto excede 30 caracteres.');
+        end if;
+
         if l_tipo in ('PACKAGE BODY', 'PACKAGE SPEC', 'PACKAGE SPECIFICATION', 'PKB', 'PKS') then
             return 'PACKAGE';
         end if;
@@ -31,23 +35,64 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         p_object_name in varchar2
     ) return varchar2
     is
+        l_nome varchar2(32767) := upper(replace(trim(p_object_name), '"'));
     begin
-        return upper(replace(trim(p_object_name), '"'));
+        if length(l_nome) > 128 then
+            raise_application_error(-20098, 'Nome de objeto excede 128 caracteres.');
+        end if;
+
+        return l_nome;
     end normalizar_nome;
 
     function normalizar_flag (
         p_flag in varchar2
     ) return varchar2
     is
+        l_flag varchar2(30) := upper(trim(p_flag));
     begin
-        return case when upper(trim(p_flag)) = 'S' then 'S' else 'N' end;
+        if l_flag is null or l_flag in ('N', 'NO', 'NAO', 'FALSE', '0') then
+            return 'N';
+        end if;
+
+        if l_flag in ('S', 'Y', 'SIM', 'YES', 'TRUE', '1') then
+            return 'S';
+        end if;
+
+        raise_application_error(-20089, 'Flag de operacao forcada invalida: ' || l_flag || '.');
     end normalizar_flag;
+
+    function truncar_bytes (
+          p_value     in varchar2
+        , p_max_bytes in pls_integer
+    ) return varchar2
+    is
+        l_value varchar2(32767) := trim(p_value);
+    begin
+        while l_value is not null and lengthb(l_value) > p_max_bytes loop
+            l_value := substr(l_value, 1, length(l_value) - 1);
+        end loop;
+
+        return l_value;
+    end truncar_bytes;
+
+    procedure validar_forca_desabilitada (
+        p_forcar in varchar2
+    )
+    is
+    begin
+        if normalizar_flag(p_forcar) = 'S' then
+            raise_application_error(
+                -20093,
+                'Operacoes forcadas estao desabilitadas no runtime cooperativo 1.1.0. Coordene a liberacao ou execute uma recuperacao administrativa revisada.'
+            );
+        end if;
+    end validar_forca_desabilitada;
 
     function ator_atual (
         p_lock_owner in varchar2
     ) return varchar2
     is
-        l_owner varchar2(255);
+        l_owner varchar2(32767);
     begin
         l_owner := trim(p_lock_owner);
 
@@ -72,8 +117,8 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         , p_ttl_minutos in number default 240
     )
     is
-        l_tipo varchar2(30) := normalizar_tipo(p_object_type);
-        l_nome varchar2(128) := normalizar_nome(p_object_name);
+        l_tipo dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome dev_object_lock.object_name%type := normalizar_nome(p_object_name);
     begin
         if l_nome is null then
             raise_application_error(-20080, 'Nome do objeto obrigatorio para lock de desenvolvimento.');
@@ -122,6 +167,34 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
             raise;
     end proc_expirar_locks;
 
+    procedure proc_purgar_historico (
+        p_keep_days in number default 30
+    )
+    is
+        pragma autonomous_transaction;
+        l_keep_days number := nvl(p_keep_days, 30);
+        l_qtd       number;
+    begin
+        if l_keep_days < 7 or l_keep_days > 3650 then
+            raise_application_error(-20094, 'Retencao do historico deve ficar entre 7 e 3650 dias.');
+        end if;
+
+        expirar_locks_vencidos;
+
+        delete from dev_object_lock
+         where lock_status in ('RELEASED', 'EXPIRED')
+           and nvl(released_at, last_heartbeat_at) <
+               systimestamp - numtodsinterval(l_keep_days, 'DAY');
+
+        l_qtd := sql%rowcount;
+        commit;
+        dbms_output.put_line('Historico de locks removido: ' || l_qtd || ' registro(s).');
+    exception
+        when others then
+            rollback;
+            raise;
+    end proc_purgar_historico;
+
     procedure proc_adquirir_lock (
           p_object_name  in varchar2
         , p_object_type  in varchar2 default 'PACKAGE'
@@ -138,10 +211,9 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
     is
         pragma autonomous_transaction;
 
-        l_tipo             varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome             varchar2(128) := normalizar_nome(p_object_name);
-        l_ator             varchar2(255) := ator_atual(p_lock_owner);
-        l_forcar           varchar2(1)   := normalizar_flag(p_forcar);
+        l_tipo             dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome             dev_object_lock.object_name%type := normalizar_nome(p_object_name);
+        l_ator             dev_object_lock.locked_by%type := ator_atual(p_lock_owner);
         l_lock_id          dev_object_lock.ad_dev_object_lock%type;
         l_locked_by        dev_object_lock.locked_by%type;
         l_branch_name      dev_object_lock.branch_name%type;
@@ -149,6 +221,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         l_lock_expires_at  dev_object_lock.lock_expires_at%type;
     begin
         validar_entrada(l_nome, l_tipo, nvl(p_ttl_minutos, 240));
+        validar_forca_desabilitada(p_forcar);
         expirar_locks_vencidos;
 
         begin
@@ -180,54 +253,13 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
                        lock_expires_at = systimestamp + numtodsinterval(nvl(p_ttl_minutos, 240), 'MINUTE'),
                        branch_name = substr(nvl(trim(p_branch_name), branch_name), 1, 255),
                        task_ref = substr(nvl(trim(p_task_ref), task_ref), 1, 500),
-                       lock_context = substr(nvl(trim(p_context), lock_context), 1, 4000),
+                       lock_context = truncar_bytes(nvl(trim(p_context), lock_context), 4000),
                        repo_base_ref = substr(nvl(trim(p_repo_base_ref), repo_base_ref), 1, 255),
                        repo_head_ref = substr(nvl(trim(p_repo_head_ref), repo_head_ref), 1, 255),
                        repo_start_sha = substr(nvl(trim(p_repo_start_sha), repo_start_sha), 1, 64)
                  where ad_dev_object_lock = l_lock_id;
 
                 dbms_output.put_line('Lock renovado: ' || l_tipo || ' ' || l_nome || ' por ' || l_ator || '.');
-            elsif l_forcar = 'S' then
-                update dev_object_lock
-                   set lock_status = 'RELEASED',
-                       released_at = systimestamp,
-                       released_by = l_ator,
-                       release_reason = 'Substituido por aquisicao forcada.'
-                 where ad_dev_object_lock = l_lock_id;
-
-                insert into dev_object_lock (
-                    object_owner,
-                    object_type,
-                    object_name,
-                    lock_status,
-                    locked_by,
-                    branch_name,
-                    task_ref,
-                    lock_context,
-                    repo_base_ref,
-                    repo_head_ref,
-                    repo_start_sha,
-                    locked_at,
-                    last_heartbeat_at,
-                    lock_expires_at
-                ) values (
-                    user,
-                    l_tipo,
-                    l_nome,
-                    'ACTIVE',
-                    l_ator,
-                    substr(trim(p_branch_name), 1, 255),
-                    substr(trim(p_task_ref), 1, 500),
-                    substr(trim(p_context), 1, 4000),
-                    substr(trim(p_repo_base_ref), 1, 255),
-                    substr(trim(p_repo_head_ref), 1, 255),
-                    substr(trim(p_repo_start_sha), 1, 64),
-                    systimestamp,
-                    systimestamp,
-                    systimestamp + numtodsinterval(nvl(p_ttl_minutos, 240), 'MINUTE')
-                );
-
-                dbms_output.put_line('Lock forcado: ' || l_tipo || ' ' || l_nome || ' por ' || l_ator || '.');
             else
                 raise_application_error(
                     -20083,
@@ -262,7 +294,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
                 l_ator,
                 substr(trim(p_branch_name), 1, 255),
                 substr(trim(p_task_ref), 1, 500),
-                substr(trim(p_context), 1, 4000),
+                truncar_bytes(p_context, 4000),
                 substr(trim(p_repo_base_ref), 1, 255),
                 substr(trim(p_repo_head_ref), 1, 255),
                 substr(trim(p_repo_start_sha), 1, 64),
@@ -294,13 +326,13 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
     is
         pragma autonomous_transaction;
 
-        l_tipo     varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome     varchar2(128) := normalizar_nome(p_object_name);
-        l_ator     varchar2(255) := ator_atual(p_lock_owner);
-        l_forcar   varchar2(1)   := normalizar_flag(p_forcar);
+        l_tipo     dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome     dev_object_lock.object_name%type := normalizar_nome(p_object_name);
+        l_ator     dev_object_lock.locked_by%type := ator_atual(p_lock_owner);
         l_qtd      number;
     begin
         validar_entrada(l_nome, l_tipo, nvl(p_ttl_minutos, 240));
+        validar_forca_desabilitada(p_forcar);
         expirar_locks_vencidos;
 
         update dev_object_lock
@@ -310,7 +342,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
            and object_type = l_tipo
            and object_name = l_nome
            and lock_status = 'ACTIVE'
-           and (locked_by = l_ator or l_forcar = 'S');
+           and locked_by = l_ator;
 
         l_qtd := sql%rowcount;
 
@@ -337,26 +369,26 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
     is
         pragma autonomous_transaction;
 
-        l_tipo     varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome     varchar2(128) := normalizar_nome(p_object_name);
-        l_ator     varchar2(255) := ator_atual(p_lock_owner);
-        l_forcar   varchar2(1)   := normalizar_flag(p_forcar);
+        l_tipo     dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome     dev_object_lock.object_name%type := normalizar_nome(p_object_name);
+        l_ator     dev_object_lock.locked_by%type := ator_atual(p_lock_owner);
         l_qtd      number;
     begin
         validar_entrada(l_nome, l_tipo, null);
+        validar_forca_desabilitada(p_forcar);
         expirar_locks_vencidos;
 
         update dev_object_lock
            set lock_status = 'RELEASED',
                released_at = systimestamp,
                released_by = l_ator,
-               release_reason = substr(nvl(trim(p_release_reason), 'Liberado pelo dono do lock.'), 1, 4000),
+               release_reason = truncar_bytes(nvl(trim(p_release_reason), 'Liberado pelo dono do lock.'), 4000),
                repo_end_sha = substr(nvl(trim(p_repo_end_sha), repo_end_sha), 1, 64)
          where object_owner = user
            and object_type = l_tipo
            and object_name = l_nome
            and lock_status = 'ACTIVE'
-           and (locked_by = l_ator or l_forcar = 'S');
+           and locked_by = l_ator;
 
         l_qtd := sql%rowcount;
 
@@ -378,9 +410,9 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         , p_lock_owner   in varchar2 default null
     )
     is
-        l_tipo             varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome             varchar2(128) := normalizar_nome(p_object_name);
-        l_ator             varchar2(255) := ator_atual(p_lock_owner);
+        l_tipo             dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome             dev_object_lock.object_name%type := normalizar_nome(p_object_name);
+        l_ator             dev_object_lock.locked_by%type := ator_atual(p_lock_owner);
         l_locked_by        dev_object_lock.locked_by%type;
         l_branch_name      dev_object_lock.branch_name%type;
         l_task_ref         dev_object_lock.task_ref%type;
@@ -428,8 +460,8 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         , p_object_type in varchar2 default 'PACKAGE'
     ) return varchar2
     is
-        l_tipo             varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome             varchar2(128) := normalizar_nome(p_object_name);
+        l_tipo             dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome             dev_object_lock.object_name%type := normalizar_nome(p_object_name);
         l_locked_by        dev_object_lock.locked_by%type;
         l_branch_name      dev_object_lock.branch_name%type;
         l_task_ref         dev_object_lock.task_ref%type;
@@ -468,8 +500,8 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         , p_horas       in number   default 48
     ) return varchar2
     is
-        l_tipo            varchar2(30)  := normalizar_tipo(p_object_type);
-        l_nome            varchar2(128) := normalizar_nome(p_object_name);
+        l_tipo            dev_object_lock.object_type%type := normalizar_tipo(p_object_type);
+        l_nome            dev_object_lock.object_name%type := normalizar_nome(p_object_name);
         l_lock_status     dev_object_lock.lock_status%type;
         l_locked_by       dev_object_lock.locked_by%type;
         l_branch_name     dev_object_lock.branch_name%type;

@@ -25,7 +25,9 @@ This creates:
 .oracle-apex-ai/project-profile.md
 .oracle-apex-ai/app-patterns.md
 .oracle-apex-ai/page-patterns/.gitkeep
-db/migrations/pending/.gitkeep
+.oracle-apex-ai/export-policy.json
+db/migrations/pending/pending_ddl.sql
+db/migrations/pending/pending_dml.sql
 db/migrations/applied/.gitkeep
 ```
 
@@ -41,13 +43,15 @@ In `project-profile.md`, fill in:
 - schema owner;
 - DEV environment;
 - SQLcl command;
+- expected `USER` and `SERVICE_NAME` returned by that connection;
 - API/OpenAPI documentation location, if the project has REST services;
 - authentication pattern for internal/private APIs, using placeholders when needed;
 - default branch;
-- how changes are published.
+- how changes are published;
 - object-lock runtime audit/install commands and actor naming;
 - official APEX snapshot and database source paths;
-- pending and applied migration lifecycle;
+- exact pending DDL/DML filenames and applied migration lifecycle;
+- full/partial five-file database release and retention choices;
 - baseline and release publication rules;
 - optional Brand Report Kit or ECharts usage.
 
@@ -63,6 +67,8 @@ Describe how your application works:
 - Inline Dialog, drawer, or another pattern;
 - reports, cards, IG, IR, Classic Report;
 - filter pattern;
+- when package-backed Dynamic Content is preferred;
+- dashboard filter, drilldown, grouping, export, and refresh actions;
 - empty-state messages;
 - success and error messages.
 
@@ -78,6 +84,8 @@ APEX calls public facades; it does not use loose SQL when a package already exis
 ```
 
 Each project must have its own packages and rules.
+
+When the user declares a layout, button, naming, filter, or interaction to be a standard, inspect the actual example and runtime first. Record the reusable rule in `app-patterns.md` and its page evidence under `page-patterns/`. Do not put that private convention into this generic repository. Updates preserve these learned files.
 
 ## Step 5: list example pages
 

@@ -1,8 +1,8 @@
-# Pending DDL Migrations
+# Pending DDL and DML
 
-Every structural change must start as a versioned pending migration before it is applied to a shared environment.
+Use one pending directory with exactly two configured SQL fragments: one for structural DDL and one for reviewed DML. Every applicable change must be versioned there before it is applied to a shared environment.
 
-This includes:
+The DDL file includes:
 
 - `create table`;
 - `alter table`;
@@ -10,10 +10,13 @@ This includes:
 - structural indexes;
 - sequences tied to a new structure;
 - materialized-view structure;
-- grants or synonyms required by the structural change;
-- reversible data backfill when it is inseparable from the structure and explicitly reviewed.
+- grants required by the structural change.
 
-Package, procedure, function, view, trigger, and type source normally remains in its canonical object folder. Include a migration wrapper only when the project release process requires one.
+The DML file includes reviewed data corrections, backfills, and approved deterministic seed/reference data. It must contain restrictive preflight, expected-row-count, rollback, and post-check logic appropriate to the risk.
+
+APEX pages, regions, components, and imports never belong in pending. Publish APEX through the complete official application export.
+
+Package, package body, procedure, function, view, trigger, type, and synonym source also never belongs in pending. Export new and changed standalone objects through the canonical database-object exporter and five-file release bundle.
 
 ## Default Layout
 
@@ -21,21 +24,17 @@ Use the project profile. If the project has no convention, initialize:
 
 ```text
 db/migrations/
-  pending/
+    pending/
+      pending_ddl.sql
+      pending_dml.sql
   applied/
 ```
 
-Recommended filename:
-
-```text
-YYYYMMDDHHMM_<short_description>.sql
-```
-
-Use a deterministic sequence suffix when more than one migration shares a timestamp.
+Projects may rename the two files in `.oracle-apex-ai/export-policy.json`, but must not create parallel pending roots or undeclared SQL files.
 
 ## Migration Contract
 
-Each migration should:
+Each pending fragment should:
 
 - state purpose and dependency in a comment;
 - use explicit object names;
@@ -47,31 +46,33 @@ Each migration should:
 - avoid swallowing `WHEN OTHERS`;
 - include rollback guidance when practical and safe.
 
-Do not claim idempotency unless repeated execution was designed and tested.
+Do not claim idempotency (safe repeat execution without changing an already-correct result) unless it was designed and tested.
 
 When a migration is a fragment included by a release `install.sql`, the outer installer owns `whenever ... exit` and the final `exit`; the included fragment must not terminate the SQLcl session before later release steps run.
 
 ## Lifecycle
 
 ```text
-pending -> included in release -> applied to defined target -> archived as applied
+pending DDL/DML -> included in release -> applied to defined target -> archived/reset after confirmation
 ```
 
 Release generation does not move a file to `applied/`. A DEV test also does not prove TEST or PROD application.
 
 The project profile must define:
 
-- pending path;
+- pending path and the two configured filenames;
 - applied/archive path;
 - who confirms application;
 - which environment advances lifecycle;
-- whether release installers copy, reference, or move migrations.
+- whether release installers copy or reference the two fragments;
+- how confirmed content is archived and how the two pending files are reset.
 
 ## Release Checks
 
-- every relevant pending migration is in the release inventory;
-- no migration is included twice;
+- the installed `check_oracle_apex_pending.py` validator passes;
+- both configured fragments are in the release inventory exactly once;
 - ordering is explicit;
 - object source and structural DDL agree;
-- applied migrations are not silently reintroduced;
+- applied content is not silently reintroduced;
+- no APEX component or standalone object source appears in pending;
 - unrelated pending work from another task is excluded or clearly blocked.

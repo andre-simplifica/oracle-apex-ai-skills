@@ -31,6 +31,13 @@ Use this reference when work touches authentication, authorization, credentials,
 - Prefer role or schema-specific grants documented in migrations.
 - Do not grant access directly in production without explicit approval and a deployment trail.
 
+## Outbound Network Access
+
+- Trace the actual definer-rights runtime principal before changing an Oracle network ACL.
+- Allow only the exact required host and port range.
+- Treat every redirect host as a separate dependency and authorization decision.
+- Validate with an approved canary and preserve rollback evidence; an HTTP 2xx from a different principal does not prove the application runtime path.
+
 ## Sensitive Data
 
 - Do not expose customer data, personal data, financial data, legal/medical/HR data, internal IDs, or raw payloads in public docs.

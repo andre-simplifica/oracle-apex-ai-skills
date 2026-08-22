@@ -4,6 +4,8 @@
 
 Choose a stable actor value such as `<developer>/<agent-or-session>`. List every supported object that may be compiled. Do not acquire speculative locks for unrelated objects.
 
+The actor value is cooperative metadata supplied by the caller; the package does not authenticate it. Use the exact project-defined actor convention in acquire, assert, renew, and release calls. Object names are canonicalized to uppercase without double quotes, so quoted mixed-case identifiers that differ only by case require a separate project coordination rule.
+
 For a package, lock the package name once with `p_object_type => 'PACKAGE'`; this covers specification and body.
 
 ## 2. Refresh Git Before Locking
@@ -98,6 +100,8 @@ end;
 ```
 
 TTL accepts 15 through 1440 minutes.
+
+Forced renewals and releases are disabled in runtime `1.1.0`. Ownership conflicts require coordination, expiry, or an explicitly reviewed administrative recovery outside the normal package API.
 
 ## 7. Release
 

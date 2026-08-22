@@ -33,16 +33,16 @@ If the four skills are already installed but the project intentionally skipped t
 - Workspace.
 - Schema owner.
 - DEV/TEST/PROD environments.
-- SQLcl command or saved connection.
+- SQLcl command or saved connection plus expected `USER` and `SERVICE_NAME`.
 - API/OpenAPI documentation location.
 - Authentication pattern for internal/private APIs.
 - Default branch and publication rule.
 - Installed skill source/ref/commit and update policy.
 - Cooperative object-lock audit, runtime, actor, TTL, and Git-base rules.
 - Official APEX snapshot and database baseline/object-source paths.
-- Initial-baseline and normal-release rules.
-- Pending and applied migration paths and lifecycle authority.
-- Optional Brand Report Kit and ECharts usage.
+- Initial-baseline, complete APEX snapshot, full/partial five-file release, and retention rules.
+- One pending root with its DDL/DML filenames and applied lifecycle authority.
+- Optional external Brand Report Kit and ECharts repository/version usage.
 - Page Designer vs SQLcl vs Object Browser standard.
 - Owning packages by functionality type.
 - Navigation, menu, and breadcrumb patterns.
@@ -50,6 +50,7 @@ If the four skills are already installed but the project intentionally skipped t
 - Contextual help pattern.
 - Dialog, drawer, and modal patterns.
 - Dashboard, report, card, IG/IR/Classic Report patterns.
+- Package-backed Dynamic Content, filters, drilldowns, grouping, export, and refresh patterns.
 - User-facing language and forbidden terms.
 - Example pages that should be copied.
 - Legacy pages that should not be copied.
@@ -67,6 +68,7 @@ Before creating or editing a page, read the profile and answer:
 - Which terms must not appear to end users?
 - Which database objects require locks, and is the runtime currently compatible?
 - Is this daily development, a first baseline, or an explicitly requested release?
-- Which structural DDL must be created under the pending path?
+- Which table/structural DDL or reviewed DML belongs in the two pending files?
+- Did the user declare a reusable standard that must be recorded in project-owned patterns?
 
 If the profile does not answer one of these questions and the repository does not prove the answer either, ask the user or record the decision as pending.

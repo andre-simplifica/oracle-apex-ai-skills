@@ -25,14 +25,18 @@ copy_if_missing() {
 copy_if_missing "${repo_root}/templates/project-profile.md" "${target_dir}/project-profile.md"
 copy_if_missing "${repo_root}/templates/app-patterns.md" "${target_dir}/app-patterns.md"
 
+if [[ -e "${target_dir}/export-policy.json" ]] || \
+   compgen -G "${project_root}/db/migrations/pending/*.sql" > /dev/null; then
+  echo "Keeping existing pending SQL contract; export-policy and default pending files require manual alignment."
+else
+  copy_if_missing "${repo_root}/templates/export-policy.json" "${target_dir}/export-policy.json"
+  copy_if_missing "${repo_root}/templates/pending-ddl.sql" "${project_root}/db/migrations/pending/pending_ddl.sql"
+  copy_if_missing "${repo_root}/templates/pending-dml.sql" "${project_root}/db/migrations/pending/pending_dml.sql"
+fi
+
 if [[ ! -e "${target_dir}/page-patterns/.gitkeep" ]]; then
   : > "${target_dir}/page-patterns/.gitkeep"
   echo "Created ${target_dir}/page-patterns/.gitkeep"
-fi
-
-if [[ ! -e "${project_root}/db/migrations/pending/.gitkeep" ]]; then
-  : > "${project_root}/db/migrations/pending/.gitkeep"
-  echo "Created ${project_root}/db/migrations/pending/.gitkeep"
 fi
 
 if [[ ! -e "${project_root}/db/migrations/applied/.gitkeep" ]]; then

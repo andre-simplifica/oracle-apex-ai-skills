@@ -97,7 +97,7 @@ O repositório é um **conjunto de skills**, não um plugin APEX. Ele contém qu
 | `oracle-apex-object-lock` | Locks cooperativos para objetos de banco no DEV compartilhado |
 | `oracle-apex-export` | Export de inspeção, baseline inicial, snapshot oficial e release |
 
-O conjunto básico funciona sozinho. Se estiverem instaladas, `build-apex-brand-reports` pode acrescentar relatórios com identidade visual, ajuda, PDF e saídas para planilha; `oracle-apex-echarts` pode acrescentar regiões Apache ECharts autocontidas.
+O conjunto básico funciona sozinho. Layouts de relatório/ajuda com identidade visual, PDF renderizado pelo navegador e saídas para planilha ficam no repositório separado [Oracle APEX Brand Report Kit](https://github.com/andre-simplifica/oracle-apex-brand-report-kit). Regiões de gráficos autocontidas ficam no [Oracle APEX ECharts](https://github.com/andre-simplifica/oracle-apex-echarts). Este kit pode recomendar esses repositórios opcionais, mas nunca copia ou atualiza seus arquivos.
 
 ## Versões APEX suportadas
 
@@ -154,6 +154,10 @@ A instalação cria ou gerencia:
 .oracle-apex-ai/installation-manifest.json
 .oracle-apex-ai/upstream-lock.json
 Util/scripts/manage_oracle_apex_ai_skills.py
+Util/scripts/check_oracle_apex_pending.py
+Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/validate_oracle_apex_export.py
+Util/scripts/validate_oracle_apex_release_bundle.py
 ```
 
 Ela inicializa os arquivos do projeto que estiverem ausentes, mas nunca sobrescreve:
@@ -162,7 +166,9 @@ Ela inicializa os arquivos do projeto que estiverem ausentes, mas nunca sobrescr
 .oracle-apex-ai/project-profile.md
 .oracle-apex-ai/app-patterns.md
 .oracle-apex-ai/page-patterns/
-db/migrations/pending/
+.oracle-apex-ai/export-policy.json
+db/migrations/pending/pending_ddl.sql
+db/migrations/pending/pending_dml.sql
 db/migrations/applied/
 ```
 
@@ -218,7 +224,7 @@ Confira Page Designer, Session State, tabelas de staging, PL/SQL e runtime antes
 
 ```text
 Os ajustes foram finalizados. Use Oracle APEX AI Skills para gerar o release:
-exporte a aplicação APEX completa que foi alterada, exporte apenas os objetos de banco alterados neste release e inclua as migrations de DDL pendentes.
+exporte a aplicação APEX completa, crie os cinco arquivos parciais de banco comparando com o snapshot-base explícito e inclua uma única vez os arquivos configurados de DDL e DML pendentes.
 ```
 
 O ponto principal não é decorar comando. O ponto é dar contexto real do projeto e fazer o agente seguir os mesmos padrões do time.
@@ -227,7 +233,7 @@ O ponto principal não é decorar comando. O ponto é dar contexto real do proje
 
 Diga **“inicialize a versão 1”** somente quando ainda não existir uma fonte completa versionada. Esse modo exporta toda a aplicação APEX e todo o DDL estrutural do schema da aplicação: tabelas, constraints, índices, sequences, types, views, packages, rotinas, triggers, synonyms e grants explícitos necessários. Dados de tabelas, segredos, usuários, wallets e schemas de sistema ou sem relação com a aplicação ficam de fora.
 
-No desenvolvimento normal, nenhum export oficial é gerado por padrão. Quando você disser **“finalizei os ajustes; gere o export do release”**, a skill gera o snapshot completo da aplicação, os objetos de banco alterados e as migrations estruturais pendentes.
+No desenvolvimento normal, nenhum export oficial é gerado por padrão. Quando você pedir explicitamente um release, a parte APEX é sempre completa: SQL dividido, YAML legível e `f<APP_ID>.sql` monolítico. A parte de banco pode ser `partial` (objetos novos/alterados comparados com um snapshot-base explícito) ou `full` (todos os objetos suportados), sempre nos mesmos cinco arquivos determinísticos. O pending tem exatamente dois arquivos configurados: DDL e DML. Componentes APEX e fontes avulsas de package/view/trigger/rotina/type/synonym são proibidos ali.
 
 ### Object locks cooperativos
 
@@ -242,7 +248,7 @@ Antes de editar ou compilar um objeto suportado no DEV compartilhado, o agente d
 5. renovar tarefas longas;
 6. liberar o lock com o SHA final ou o motivo do abandono.
 
-Um único lock do tipo `PACKAGE` cobre specification e body.
+Um único lock do tipo `PACKAGE` cobre specification e body. O runtime 1.1 também inclui limpeza controlada do histórico e um desinstalador que se recusa a continuar enquanto existir lock ativo não expirado. A instalação dos arquivos nunca executa esses scripts no banco.
 
 ## Deixe os padrões do projeto fora do núcleo
 
@@ -265,6 +271,8 @@ As regras específicas da sua aplicação ficam no seu próprio projeto, normalm
 - quais packages são donas de dashboards, ajuda e lógica transacional;
 - quais páginas são bons exemplos;
 - quais páginas antigas não devem ser copiadas.
+
+Quando você declarar uma dessas convenções como padrão do projeto, o agente primeiro analisa o exemplo real e o runtime, depois registra a regra reutilizável nesses arquivos do projeto. Atualizações futuras do kit os preservam. Para layouts com identidade visual ou muita interação, a skill considera ativamente uma região Dynamic Content apoiada por package, com filtros, drilldowns, agrupamento, ações de export e refresh direcionado; os componentes nativos continuam preferidos quando já atendem bem.
 
 É isso que deixa a skill portátil. O núcleo funciona em vários projetos APEX, e cada projeto mantém sua própria personalidade e suas próprias regras.
 
@@ -330,6 +338,8 @@ git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracl
 bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
 ```
 
+O instalador pessoal usa o local atual de skills pessoais do Codex, `$HOME/.agents/skills`. Se já existir um diretório antigo copiado, revise-o e use `--replace-existing`; o instalador o move para um backup com timestamp antes de criar o link para este repositório. A mesma opção migra somente as quatro entradas legadas deste kit para fora de `${CODEX_HOME:-$HOME/.codex}/skills`, evitando versões duplicadas.
+
 Para mais detalhes:
 
 - [docs/install-codex.md](docs/install-codex.md)
@@ -348,9 +358,10 @@ Oracle APEX AI Skills foi atualizada. Atualize este projeto usando:
 https://github.com/andre-simplifica/oracle-apex-ai-skills
 
 Compare o commit instalado com a tag ou commit solicitado.
-Execute status, check e update --dry-run primeiro.
+Execute status, doctor, check e update --dry-run primeiro.
 Mostre o diff exato dos arquivos gerenciados e pare se algum deles tiver alteração local.
-Preserve .oracle-apex-ai/project-profile.md, app-patterns, page-patterns e todas as migrations.
+Preserve .oracle-apex-ai/project-profile.md, app-patterns, page-patterns, export-policy.json e todas as migrations.
+Se esta versão trouxer novos templates do projeto, inicialize apenas os arquivos ausentes; nunca substitua arquivos customizados.
 Não altere o Oracle, não importe APEX, não faça commit e não faça push automaticamente.
 ```
 
@@ -360,7 +371,7 @@ Status manual:
 python3 Util/scripts/manage_oracle_apex_ai_skills.py status --project-root .
 ```
 
-Use o gerenciador de uma origem upstream recém-atualizada para `check` e `update`, seguindo [docs/update-and-contribute.md](docs/update-and-contribute.md).
+Use o gerenciador de uma origem upstream recém-atualizada para `check` e `update`. Passe `--initialize-missing-project-files` somente depois de revisar o dry-run. Siga [docs/update-and-contribute.md](docs/update-and-contribute.md).
 
 ## O que está incluído
 
@@ -369,10 +380,10 @@ Use o gerenciador de uma origem upstream recém-atualizada para `check` e `updat
 - `skills/oracle-apex-object-lock`: skill de lock cooperativo no DEV compartilhado e runtime SQL completo.
 - `skills/oracle-apex-export`: skill de baseline, snapshot, fonte de banco e release APEX.
 - `skills/oracle-apex-dev/references/`: referências detalhadas para REST, SQL/PLSQL, debugging, jobs, segurança e operações destrutivas.
-- `templates/`: modelos de perfil do projeto e compatibilidade.
-- `schemas/`: contratos de instalação, upstream lock e compatibilidade legíveis por máquina.
+- `templates/`: modelos de perfil, padrões, política de export, pending DDL/DML e compatibilidade.
+- `schemas/`: contratos de instalação, upstream lock, compatibilidade e política de export legíveis por máquina.
 - `scripts/manage_project_installation.py`: gerenciador determinístico de instalação/atualização no projeto.
-- `scripts/`: instalação pessoal, criação de perfil e validação do repositório.
+- `scripts/`: instalação pessoal, criação de perfil, validação de APEX/release/pending, planejamento de retenção e validação do repositório.
 - `docs/`: guias para humanos.
 - `SECURITY.md`: regras públicas de segurança para issues, PRs, prints, logs e exemplos.
 - `.github/`: templates de issue e pull request.

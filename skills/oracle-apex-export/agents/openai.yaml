@@ -1,7 +1,7 @@
 interface:
   display_name: "Oracle APEX Export"
-  short_description: "Build APEX baselines, snapshots, and release exports"
-  default_prompt: "Use $oracle-apex-export to generate the requested APEX 24.2 baseline, snapshot, or release export while following the project profile."
+  short_description: "Validate complete APEX and full/partial database releases"
+  default_prompt: "Use $oracle-apex-export to generate only the explicitly requested APEX 24.2 baseline, complete snapshot, or full/partial five-file release with pending and retention guardrails."
 
 policy:
   allow_implicit_invocation: true

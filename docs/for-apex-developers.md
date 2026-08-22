@@ -30,7 +30,7 @@ The skill does not replace engineering judgment. It should not:
 - hide compilation errors;
 - ignore the visual standard of the project.
 
-Installing the skill files does not install database objects. The lock runtime is cooperative rather than a hard Oracle DDL block. The kit also does not create an official export, apply pending DDL, or import APEX unless that separate operation is explicitly requested.
+Installing the skill files does not install database objects. The lock runtime is cooperative rather than a hard Oracle DDL block. The kit also does not create an official export, apply pending DDL/DML, purge history, or import APEX unless that separate operation is explicitly requested and authorized.
 
 ## Daily usage
 
@@ -55,7 +55,7 @@ Use the oracle-apex-export skill to update the APEX application snapshot.
 
 When a shared DEV package, view, trigger, procedure, function, type, or synonym is involved, the agent should audit the lock runtime, refresh Git, acquire the object lock, and assert ownership before compilation.
 
-When structural DDL is involved, the change should first be versioned under the pending-migration path from the project profile.
+When table/constraint/index/sequence structure is involved, version it in the configured pending DDL file. Put reviewed corrections/backfills/seed data in the pending DML file. Never place APEX components or standalone package/view/trigger/routine/type/synonym source there; the complete APEX export and canonical five-file database exporter own those sources.
 
 ## How to get more value
 
@@ -95,12 +95,13 @@ Fill it with how your application actually works:
 - owning packages;
 - help pattern;
 - dashboard pattern;
+- package-backed Dynamic Content pattern and interactive actions;
 - dialog pattern;
 - example pages;
 - mandatory validations.
 - object-lock runtime and actor policy;
 - official APEX/database export paths;
-- pending migration lifecycle;
+- pending DDL/DML and retention lifecycle;
 - release publication rules.
 
 The better this file is, the better the agent works.

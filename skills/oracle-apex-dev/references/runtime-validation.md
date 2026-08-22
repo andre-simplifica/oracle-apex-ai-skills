@@ -22,6 +22,7 @@ No visual or functional APEX screen change is ready without runtime validation, 
 - Prefer native Dynamic Actions when available.
 - Test real refresh, not only initial page load.
 - Validate JSON/HTML response and error handling.
+- For clickable dashboards, test filter, drilldown/grouping, clear/reset, refresh, keyboard activation, loading, empty, and authorization behavior as applicable.
 
 ## Diagnosis
 

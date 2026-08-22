@@ -28,7 +28,7 @@ Pasting the GitHub URL tells Codex where to fetch the source. It is not a specia
 5. Run the install manager with `--dry-run`.
 6. Explain every `CREATE`, `UPDATE`, `PRESERVE`, and conflict.
 7. Run the installation without `--dry-run`.
-8. Run `status` and inspect the consuming-project diff.
+8. Run `status` and `doctor`, then inspect the consuming-project diff.
 9. Audit the object-lock runtime separately.
 
 ## Manual Project Install
@@ -81,6 +81,10 @@ Managed:
 .oracle-apex-ai/installation-manifest.json
 .oracle-apex-ai/upstream-lock.json
 Util/scripts/manage_oracle_apex_ai_skills.py
+Util/scripts/check_oracle_apex_pending.py
+Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/validate_oracle_apex_export.py
+Util/scripts/validate_oracle_apex_release_bundle.py
 ```
 
 Initialized when missing and then owned by the consuming project:
@@ -89,11 +93,13 @@ Initialized when missing and then owned by the consuming project:
 .oracle-apex-ai/project-profile.md
 .oracle-apex-ai/app-patterns.md
 .oracle-apex-ai/page-patterns/
-db/migrations/pending/
+.oracle-apex-ai/export-policy.json
+db/migrations/pending/pending_ddl.sql
+db/migrations/pending/pending_dml.sql
 db/migrations/applied/
 ```
 
-Use `--no-project-scaffold` only when the repository already has an intentional alternative layout and its profile documents it.
+Use `--no-project-scaffold` only when the repository already has an intentional alternative layout and its profile documents it. Existing project-owned files are never overwritten. During a later upgrade, `--initialize-missing-project-files` may create newly introduced templates only when they are absent.
 
 ## Audit Object Locks
 
@@ -113,6 +119,8 @@ sql -name <dev-connection> \
 
 Do not run the installer simply because the skill files exist.
 
+Runtime 1.1 also provides `purge-history.sql` and `uninstall.sql`. Purge is a permanent database mutation. Uninstall first refuses non-expired active locks and removes only the documented lock objects; both require explicit target verification and authorization.
+
 ## Personal Installation
 
 For local experimentation across projects:
@@ -122,7 +130,13 @@ git clone https://github.com/andre-simplifica/oracle-apex-ai-skills.git ~/.oracl
 bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh
 ```
 
-This personal symlink mode is secondary. A project-managed installation is easier for a team to review, reproduce, and update.
+The target is `$HOME/.agents/skills`, the current user-scoped Codex discovery location. To replace older copied directories after review:
+
+```bash
+bash ~/.oracle-apex-ai-skills/scripts/install_codex.sh --replace-existing
+```
+
+The script moves replaced entries into `$HOME/.agents/skill-backups/<timestamp>/` before symlinking. With `--replace-existing`, it also backs up and removes the four legacy entries under `${CODEX_HOME:-$HOME/.codex}/skills` so Codex does not discover two versions of the same skill. Other skills in that legacy directory are untouched. This personal mode is secondary. A project-managed installation is easier for a team to review, reproduce, and update.
 
 ## Discovery
 

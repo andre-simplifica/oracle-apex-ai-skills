@@ -24,15 +24,21 @@ Use this reference when writing, reviewing, or debugging SQL and PL/SQL for Orac
 - Do not add `commit` inside reusable package routines unless the routine is explicitly an autonomous or transactional boundary by design.
 - Avoid `when others then null`.
 - If catching exceptions, log useful sanitized context and either re-raise or return a structured failure.
+- Prefer an implicit cursor `for` loop for straightforward row iteration; use explicit open/fetch/close only when its additional control is actually required.
 - Use `bulk collect` / `forall` for large batch work when appropriate.
 - Use CLOB-safe logic for large JSON, HTML, or API payloads.
+- Use character semantics such as `VARCHAR2(1 CHAR)` when the business rule means one Unicode character and the database default may use BYTE semantics.
 - Prefer `json_value`, `json_table`, `json_object`, `json_arrayagg`, or `apex_json` according to project standards.
 
 ## Compilation and Validation
 
 In a shared DEV schema, use `oracle-apex-object-lock` before editing a supported versioned object. Assert the owned active lock immediately before every `create or replace` or compilation.
 
-Write every table or structural DDL change to the pending-migration path from the project profile before applying it.
+Write table/structural DDL and reviewed DML to the two configured pending files before applying them. Do not version APEX components or standalone package/view/trigger/routine/type/synonym source there.
+
+Never hard-code an automatically generated `SYS_C...` constraint name in a migration intended for more than one environment. Resolve legacy constraints by owner/table, type, columns, and normalized definition, then keep preflight, validation, and removal references aligned.
+
+For corrective DML, use a current-state predicate, expected-row-count guard, explicit transaction control, rollback path, and post-check. Abort when the observed target differs from the expected target.
 
 After changing PL/SQL, validate:
 

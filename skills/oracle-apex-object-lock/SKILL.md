@@ -1,11 +1,11 @@
 ---
 name: oracle-apex-object-lock
-description: Use for installing, auditing, and enforcing the cooperative PK_DEV_OBJECT_LOCK runtime before editing, compiling, replacing, or testing versioned PL/SQL and other supported objects in a shared Oracle DEV schema.
+description: Use for installing, upgrading, auditing, retaining, uninstalling, and enforcing the cooperative PK_DEV_OBJECT_LOCK runtime before editing, compiling, replacing, or testing versioned PL/SQL and other supported objects in a shared Oracle DEV schema.
 ---
 
 # Oracle APEX Object Lock
 
-Coordinate changes to live, versioned database objects in a shared DEV schema. This skill ships the table, indexes, views, package, audit script, and validation script required by the runtime.
+Coordinate changes to live, versioned database objects in a shared DEV schema. This skill ships the table, indexes, views, package, audit, installation, validation, retention, and guarded uninstall scripts required by the runtime.
 
 ## Determine Runtime State
 
@@ -28,7 +28,7 @@ Database installation is a mutation. Obtain explicit authorization and confirm t
 @.agents/skills/oracle-apex-object-lock/assets/database/install.sql
 ```
 
-The installer is idempotent for its table, columns, indexes, and views; it replaces the package specification and body, then validates the runtime. Do not run it in TEST or PROD merely because the skill is present there.
+The installer is idempotent: rerunning it preserves compatible existing data, creates missing pieces, applies known metadata upgrades, replaces the package specification/body, and validates the runtime. Do not run it in TEST or PROD merely because the skill is present there.
 
 After installation, run `audit-installation.sql` again. Record the status in the task closeout; never store a password or connection string in the project profile.
 
@@ -60,11 +60,19 @@ For unsupported object types or structural table DDL, use the pending migration 
 ## Boundaries
 
 - This is a cooperative application-level lock, not an Oracle DDL trigger.
+- It is coordination, not an authorization boundary: `p_lock_owner` is caller-supplied and must follow the project's stable actor convention.
 - Manual SQL executed outside this workflow can bypass it.
+- Object names are canonicalized to uppercase without double quotes. Do not use this runtime to distinguish quoted mixed-case identifiers that differ only by case.
 - Never force another owner's lock as a normal recovery path.
-- `p_forcar => 'S'` requires explicit administrative authorization and a recorded reason.
+- Runtime `1.1.0` keeps the legacy `p_forcar` parameter for call compatibility but rejects forced acquire, renew, and release operations. Coordinate owner release or use a separately reviewed administrative recovery.
 - An expired or released recent lock is still a signal to refresh Git before working on the object.
 - A database connection failure does not prove that the runtime is absent.
+
+## Retention and Uninstall
+
+- Run `purge-history.sql <keep-days>` only after confirming the DEV connection, reviewing candidate counts, and authorizing the delete. It never deletes active locks.
+- Run `uninstall.sql` only when the user explicitly requests runtime removal. It refuses active locks, then permanently removes the package, views, table, indexes, constraints, and lock history.
+- Skill-file update, runtime upgrade, history purge, and runtime uninstall are four separate operations.
 
 ## Closeout
 

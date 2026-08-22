@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/andre-simplifica/oracle-apex-ai-skills/schemas/export-policy.schema.json",
+  "title": "Oracle APEX AI Skills project export policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "apex", "database_release", "pending", "retention"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "apex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_export_scope",
+        "require_split_sql",
+        "require_readable_yaml",
+        "require_monolithic_sql",
+        "require_editable_build_status",
+        "supporting_objects"
+      ],
+      "properties": {
+        "official_export_scope": {"const": "complete-application"},
+        "require_split_sql": {"type": "boolean"},
+        "require_readable_yaml": {"type": "boolean"},
+        "require_monolithic_sql": {"type": "boolean"},
+        "require_editable_build_status": {"type": "boolean"},
+        "supporting_objects": {"enum": ["include", "exclude", "project-defined"]}
+      }
+    },
+    "database_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_scope",
+        "full_scope_label",
+        "partial_scope_label",
+        "output_directory",
+        "filename_pattern",
+        "five_file_groups",
+        "compile_routine"
+      ],
+      "properties": {
+        "default_scope": {"enum": ["full", "partial"]},
+        "full_scope_label": {"const": "full"},
+        "partial_scope_label": {"const": "partial"},
+        "output_directory": {"type": "string", "minLength": 1},
+        "filename_pattern": {"const": "snapshot_{snapshot_id}_{scope}_{order}_{group}.sql"},
+        "five_file_groups": {
+          "const": [
+            "package_specs",
+            "views",
+            "package_bodies",
+            "triggers",
+            "compile_objects"
+          ]
+        },
+        "compile_routine": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_$#]*(?:\\.[A-Za-z][A-Za-z0-9_$#]*)?$"}
+          ]
+        }
+      }
+    },
+    "pending": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "ddl_file",
+        "dml_file",
+        "allow_apex_components",
+        "allow_standalone_object_source"
+      ],
+      "properties": {
+        "directory": {"type": "string", "minLength": 1},
+        "ddl_file": {"type": "string", "pattern": "^[^/]+\\.sql$"},
+        "dml_file": {"type": "string", "pattern": "^[^/]+\\.sql$"},
+        "allow_apex_components": {"const": false},
+        "allow_standalone_object_source": {"const": false}
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["review_every_releases", "repository_releases", "database_snapshots"],
+      "properties": {
+        "review_every_releases": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "repository_releases": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "keep_latest", "directory_name_pattern"],
+          "properties": {
+            "mode": {"enum": ["report", "prune"]},
+            "keep_latest": {"type": "integer", "minimum": 1, "maximum": 10000},
+            "directory_name_pattern": {"type": "string", "minLength": 1}
+          }
+        },
+        "database_snapshots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "package", "keep_months", "keep_scripts"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "package": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_$#]*$"},
+            "keep_months": {"type": "integer", "minimum": 1, "maximum": 120},
+            "keep_scripts": {"type": "integer", "minimum": 1, "maximum": 10000}
+          }
+        }
+      }
+    }
+  }
+}

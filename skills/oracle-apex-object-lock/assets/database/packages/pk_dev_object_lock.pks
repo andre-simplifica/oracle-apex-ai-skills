@@ -1,10 +1,14 @@
 create or replace package "PK_DEV_OBJECT_LOCK" as
 
-    c_runtime_version constant varchar2(20) := '1.0.0';
+    c_runtime_version constant varchar2(20) := '1.1.0';
 
     function func_runtime_version return varchar2 deterministic;
 
     procedure proc_expirar_locks;
+
+    procedure proc_purgar_historico (
+        p_keep_days in number default 30
+    );
 
     procedure proc_adquirir_lock (
           p_object_name  in varchar2

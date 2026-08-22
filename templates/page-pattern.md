@@ -40,6 +40,8 @@ Save a copy at:
 - Session State items:
 - Items to Submit:
 - Important Static IDs:
+- Dynamic Content package/function:
+- Filter, refresh, drilldown, grouping, and export actions:
 
 ## Copy Checklist
 
@@ -48,3 +50,4 @@ Save a copy at:
 - [ ] Confirm authorizations.
 - [ ] Test success.
 - [ ] Test known failure case.
+- [ ] Test keyboard access, loading, empty, and post-refresh state when interactive.

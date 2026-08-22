@@ -32,7 +32,7 @@ python3 scripts/manage_project_installation.py install \
   --source-ref <tag-or-commit>
 ```
 
-The personal/global alternative uses `$HOME/.agents/skills/` through `scripts/install_codex.sh`.
+The personal/global alternative uses `$HOME/.agents/skills/` through `scripts/install_codex.sh`. Existing copied directories are preserved unless the operator explicitly requests `--replace-existing`, which backs them up before symlinking. That option also migrates the four legacy copies from `${CODEX_HOME:-$HOME/.codex}/skills/` out of the discovery path so duplicate versions cannot coexist.
 
 ## Claude Code
 

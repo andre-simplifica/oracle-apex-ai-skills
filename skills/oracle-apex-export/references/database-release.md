@@ -9,7 +9,7 @@ Build the release inventory from evidence:
 - files changed in the task branch;
 - object locks acquired during the task;
 - packages, views, triggers, types, procedures, functions, or synonyms compiled in DEV;
-- pending DDL migration files;
+- pending DDL and DML files;
 - explicit task notes.
 
 Reconcile the sources. A lock is coordination evidence, not proof that the object changed. DEV modification timestamps alone are not reliable release scope.
@@ -19,15 +19,18 @@ Reconcile the sources. A lock is coordination evidence, not proof that the objec
 - Export current source for every changed versioned database object.
 - For a package change, inspect and export both specification and body when either could affect the public contract; do not publish a stale spec/body pair.
 - Preserve one canonical source location per object.
-- Include table and structural DDL from `migrations/pending/`; do not replace it with a fresh `DBMS_METADATA` table dump.
+- Include table and structural DDL plus reviewed data changes from the two configured pending files; do not replace structural migrations with a fresh `DBMS_METADATA` table dump.
 - Include newly created object source and any dependency ordering required by the release.
 - Exclude unrelated DEV drift and objects changed by another open task.
 
-## Project-Defined Full Snapshot Releases
+## Full and Partial Snapshot Releases
 
-Some repositories intentionally publish a complete database-object snapshot for
-each release instead of only changed objects. Use this mode only when the project
-profile and existing repository layout define it.
+The consuming project chooses `full` or `partial` in its profile/export policy.
+Both use the canonical five-file contract in [release-bundle.md](release-bundle.md).
+
+- `full` publishes every supported object in the confirmed current snapshot.
+- `partial` publishes objects whose normalized DDL hash is new or changed from
+  one explicit base snapshot.
 
 - Create or select one confirmed source snapshot for the entire release.
 - Generate every object group from that same snapshot identifier.
@@ -61,14 +64,14 @@ db/releases/<YYYY-MM-DD-or-version>/
 - release identifier;
 - APEX app ID and snapshot path;
 - changed database objects;
-- included pending migrations;
+- included pending DDL and DML;
 - required order;
 - validation environment;
 - items intentionally excluded or blocked.
 
 ## Pending Migration Lifecycle
 
-Copy or reference pending migrations exactly once in the release installer. Do not move them to `applied/` merely because the release package was generated.
+Copy or reference the configured pending DDL and DML exactly once in the release installer. Do not move or reset them merely because the release package was generated.
 
 Move a migration out of pending only after the project-defined target application is confirmed. Record the target and confirmation according to repository rules.
 

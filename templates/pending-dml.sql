@@ -1,0 +1,5 @@
+-- Pending reviewed DML for the next release.
+-- Keep data corrections, backfills, and approved seed/reference data here.
+-- Add restrictive preflight, expected-row-count, rollback, and post-check logic.
+-- Do not place APEX components or structural/object DDL here.
+-- This is an included fragment: the release installer owns SQLcl exit behavior.

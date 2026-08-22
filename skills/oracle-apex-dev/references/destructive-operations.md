@@ -27,9 +27,10 @@ Use this reference before any action that can delete data, change production beh
 
 Before DML:
 
-- show the select that identifies affected rows;
-- estimate row count;
-- explain commit/rollback plan;
+- show the current-state select that identifies affected rows;
+- define and enforce the exact expected row count;
+- use a restrictive predicate that aborts if the target state has drifted;
+- explain commit/rollback plan and post-check;
 - run in DEV/TEST first when practical.
 
 Before DDL:

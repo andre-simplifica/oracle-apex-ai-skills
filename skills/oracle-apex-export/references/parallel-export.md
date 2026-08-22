@@ -53,9 +53,9 @@ For database artifacts:
 - reconcile object counts by type between the source inventory and every
   materialized output;
 - never mix snapshot identifiers in one official bundle;
-- use a project-defined full snapshot release only when the project profile
-  explicitly requires it; otherwise keep normal release scope to changed
-  objects and pending migrations.
+- use the configured `full` or `partial` scope; partial output compares against
+  one explicit base snapshot and still produces the same five scoped files;
+- never create a second snapshot merely to materialize another output format.
 
 ## Failure and Retry
 

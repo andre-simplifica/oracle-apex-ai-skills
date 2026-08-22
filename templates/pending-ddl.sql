@@ -1,0 +1,4 @@
+-- Pending structural DDL for the next release.
+-- Keep table, column, constraint, index, and related structural changes here.
+-- Do not place APEX components or standalone package/view/trigger/routine/type/synonym source here.
+-- This is an included fragment: the release installer owns SQLcl exit behavior.

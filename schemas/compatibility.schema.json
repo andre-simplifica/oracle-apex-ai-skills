@@ -19,6 +19,10 @@
     "kit": {
       "const": "oracle-apex-ai-skills"
     },
+    "kit_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
     "apex": {
       "type": "object",
       "additionalProperties": false,
@@ -76,6 +80,19 @@
         "type": "string"
       },
       "uniqueItems": true
+    },
+    "optional_companion_repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["build-apex-brand-reports", "oracle-apex-echarts"],
+      "properties": {
+        "build-apex-brand-reports": {
+          "const": "https://github.com/andre-simplifica/oracle-apex-brand-report-kit"
+        },
+        "oracle-apex-echarts": {
+          "const": "https://github.com/andre-simplifica/oracle-apex-echarts"
+        }
+      }
     }
   }
 }

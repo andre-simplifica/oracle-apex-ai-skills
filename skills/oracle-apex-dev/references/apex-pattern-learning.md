@@ -50,6 +50,8 @@ Record:
 - called packages;
 - SQL source examples.
 
+When the user explicitly identifies something as a project standard, inspect the real page and runtime first, then record the reusable rule, its canonical example, and any exception. Do not leave a confirmed standard only in chat history, and do not promote a one-page workaround into a project-wide rule.
+
 ## Classification
 
 - **Read-only**: understand a page, compare patterns, locate components.

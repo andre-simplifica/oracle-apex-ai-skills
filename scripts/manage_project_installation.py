@@ -21,6 +21,7 @@ import uuid
 
 KIT_NAME = "oracle-apex-ai-skills"
 MANIFEST_SCHEMA_VERSION = 1
+PROJECT_PROFILE_VERSION = 2
 CORE_SKILLS = (
     "oracle-apex-ai-skills",
     "oracle-apex-dev",
@@ -30,7 +31,19 @@ CORE_SKILLS = (
 MANIFEST_PATH = Path(".oracle-apex-ai/installation-manifest.json")
 UPSTREAM_LOCK_PATH = Path(".oracle-apex-ai/upstream-lock.json")
 COMPATIBILITY_PATH = Path(".oracle-apex-ai/compatibility.json")
+EXPORT_POLICY_PATH = Path(".oracle-apex-ai/export-policy.json")
 PROJECT_MANAGER_PATH = Path("Util/scripts/manage_oracle_apex_ai_skills.py")
+PENDING_CHECKER_PATH = Path("Util/scripts/check_oracle_apex_pending.py")
+RETENTION_MANAGER_PATH = Path("Util/scripts/manage_oracle_apex_export_retention.py")
+APEX_EXPORT_VALIDATOR_PATH = Path("Util/scripts/validate_oracle_apex_export.py")
+RELEASE_VALIDATOR_PATH = Path("Util/scripts/validate_oracle_apex_release_bundle.py")
+PROJECT_TOOL_PATHS = (
+    PROJECT_MANAGER_PATH,
+    PENDING_CHECKER_PATH,
+    RETENTION_MANAGER_PATH,
+    APEX_EXPORT_VALIDATOR_PATH,
+    RELEASE_VALIDATOR_PATH,
+)
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 
 
@@ -93,8 +106,16 @@ def validate_source(source_root: Path) -> None:
                 missing.append(f"skills/{skill}/{required}")
 
     for required_path in (
+        Path("VERSION"),
         Path("scripts/manage_project_installation.py"),
+        Path("scripts/check_pending_migrations.py"),
+        Path("scripts/manage_export_retention.py"),
+        Path("scripts/validate_apex_export.py"),
+        Path("scripts/validate_release_bundle.py"),
         Path("templates/compatibility.json"),
+        Path("templates/export-policy.json"),
+        Path("templates/pending-ddl.sql"),
+        Path("templates/pending-dml.sql"),
         Path("templates/project-profile.md"),
         Path("templates/app-patterns.md"),
     ):
@@ -111,10 +132,15 @@ def validate_source(source_root: Path) -> None:
         )
 
     compatibility = read_json(source_root / "templates/compatibility.json")
+    kit_version = (source_root / "VERSION").read_text(encoding="utf-8").strip()
     if compatibility.get("kit") != KIT_NAME:
         raise InstallationError("Source compatibility record has an unexpected kit name")
     if compatibility.get("schema_version") != 1:
         raise InstallationError("Unsupported source compatibility schema")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", kit_version):
+        raise InstallationError("Source VERSION is not semantic version X.Y.Z")
+    if compatibility.get("kit_version") != kit_version:
+        raise InstallationError("Source VERSION and compatibility kit_version differ")
 
 
 def source_file_map(source_root: Path) -> dict[str, Path]:
@@ -127,9 +153,15 @@ def source_file_map(source_root: Path) -> dict[str, Path]:
             target = Path(".agents/skills") / skill / relative
             mapping[target.as_posix()] = skill_root / relative
 
-    mapping[PROJECT_MANAGER_PATH.as_posix()] = (
-        source_root / "scripts/manage_project_installation.py"
-    )
+    project_tools = {
+        PROJECT_MANAGER_PATH: Path("scripts/manage_project_installation.py"),
+        PENDING_CHECKER_PATH: Path("scripts/check_pending_migrations.py"),
+        RETENTION_MANAGER_PATH: Path("scripts/manage_export_retention.py"),
+        APEX_EXPORT_VALIDATOR_PATH: Path("scripts/validate_apex_export.py"),
+        RELEASE_VALIDATOR_PATH: Path("scripts/validate_release_bundle.py"),
+    }
+    for target, source in project_tools.items():
+        mapping[target.as_posix()] = source_root / source
     mapping[COMPATIBILITY_PATH.as_posix()] = (
         source_root / "templates/compatibility.json"
     )
@@ -270,6 +302,9 @@ def load_manifest(project_root: Path) -> Optional[dict]:
             raise InstallationError(
                 f"Invalid checksum for managed path in {MANIFEST_PATH}: {relative}"
             )
+    # Keep schema-v1 installations updatable. Version 1.0 manifests predate the
+    # four export helpers, so requiring the current complete tool set here would
+    # block the update that needs to add those files.
     required_managed = {
         PROJECT_MANAGER_PATH.as_posix(),
         COMPATIBILITY_PATH.as_posix(),
@@ -308,7 +343,7 @@ def load_manifest(project_root: Path) -> Optional[dict]:
 
 def is_allowed_managed_file(relative: str) -> bool:
     path = Path(relative)
-    if path in (PROJECT_MANAGER_PATH, COMPATIBILITY_PATH):
+    if path in (*PROJECT_TOOL_PATHS, COMPATIBILITY_PATH):
         return True
     parts = path.parts
     return (
@@ -353,7 +388,7 @@ def validate_project_root(project_root: Path) -> None:
 def managed_roots() -> tuple[Path, ...]:
     return tuple(
         [Path(".agents/skills") / skill for skill in CORE_SKILLS]
-        + [PROJECT_MANAGER_PATH, COMPATIBILITY_PATH]
+        + [*PROJECT_TOOL_PATHS, COMPATIBILITY_PATH]
     )
 
 
@@ -513,6 +548,19 @@ def build_plan(
 def scaffold_plan(
     project_root: Path, source_root: Path
 ) -> list[tuple[str, Path, Optional[Path]]]:
+    pending_root = project_root / "db/migrations/pending"
+    existing_pending_sql = (
+        sorted(path for path in pending_root.rglob("*.sql") if path.is_file())
+        if pending_root.is_dir()
+        else []
+    )
+    existing_export_policy = (project_root / EXPORT_POLICY_PATH).exists()
+    existing_project_profile = (
+        project_root / ".oracle-apex-ai/project-profile.md"
+    ).exists()
+    preserve_existing_pending_contract = bool(
+        existing_pending_sql or existing_export_policy or existing_project_profile
+    )
     candidates = (
         (
             "CREATE_PROJECT_FILE",
@@ -526,13 +574,23 @@ def scaffold_plan(
         ),
         (
             "CREATE_PROJECT_FILE",
+            EXPORT_POLICY_PATH,
+            source_root / "templates/export-policy.json",
+        ),
+        (
+            "CREATE_PROJECT_FILE",
             Path(".oracle-apex-ai/page-patterns/.gitkeep"),
             None,
         ),
         (
             "CREATE_PROJECT_FILE",
-            Path("db/migrations/pending/.gitkeep"),
-            None,
+            Path("db/migrations/pending/pending_ddl.sql"),
+            source_root / "templates/pending-ddl.sql",
+        ),
+        (
+            "CREATE_PROJECT_FILE",
+            Path("db/migrations/pending/pending_dml.sql"),
+            source_root / "templates/pending-dml.sql",
         ),
         (
             "CREATE_PROJECT_FILE",
@@ -542,6 +600,12 @@ def scaffold_plan(
     )
     missing = []
     for candidate in candidates:
+        if preserve_existing_pending_contract and candidate[1] in {
+            EXPORT_POLICY_PATH,
+            Path("db/migrations/pending/pending_ddl.sql"),
+            Path("db/migrations/pending/pending_dml.sql"),
+        }:
+            continue
         direct_target = project_root / candidate[1]
         if direct_target.exists() or direct_target.is_symlink():
             continue
@@ -609,7 +673,7 @@ def apply_plan(
                 if action in {"CREATE", "UPDATE"}:
                     backup(target)
                     atomic_write(target, mapping[relative].read_bytes())
-                    if relative == PROJECT_MANAGER_PATH.as_posix():
+                    if relative in {path.as_posix() for path in PROJECT_TOOL_PATHS}:
                         target.chmod(0o755)
                 elif action == "DELETE":
                     backup(target)
@@ -624,9 +688,11 @@ def apply_plan(
                 atomic_write(target, content)
                 created_scaffold.append(target)
 
+            compatibility = read_json(source_root / "templates/compatibility.json")
             upstream_lock = {
                 "schema_version": 1,
                 "kit": KIT_NAME,
+                "kit_version": compatibility["kit_version"],
                 "installed_at": timestamp,
                 **source_metadata,
             }
@@ -635,13 +701,13 @@ def apply_plan(
             backup(upstream_target)
             atomic_write(upstream_target, upstream_bytes)
 
-            compatibility = read_json(source_root / "templates/compatibility.json")
             manifest = {
                 "schema_version": MANIFEST_SCHEMA_VERSION,
                 "kit": KIT_NAME,
                 "installed_at": timestamp,
                 "source": source_metadata,
                 "compatibility": {
+                    "kit_version": compatibility["kit_version"],
                     "apex_target": compatibility["apex"]["target"],
                     "object_lock_runtime_required": compatibility["database"][
                         "object_lock_runtime_required"
@@ -655,6 +721,7 @@ def apply_plan(
                     ".oracle-apex-ai/project-profile.md",
                     ".oracle-apex-ai/app-patterns.md",
                     ".oracle-apex-ai/page-patterns/",
+                    ".oracle-apex-ai/export-policy.json",
                     "db/migrations/pending/",
                     "db/migrations/applied/",
                 ],
@@ -703,10 +770,155 @@ def command_status(args: argparse.Namespace) -> int:
     print_inspection(inspection)
     if manifest:
         source = manifest.get("source", {})
+        compatibility = manifest.get("compatibility", {})
+        print(f"KIT_VERSION {compatibility.get('kit_version', 'UNKNOWN')}")
         print(f"SOURCE_REPOSITORY {source.get('repository', 'UNKNOWN')}")
         print(f"SOURCE_REF {source.get('requested_ref', 'UNKNOWN')}")
         print(f"SOURCE_COMMIT {source.get('resolved_commit', 'UNKNOWN')}")
     return 0 if inspection["status"] == "HEALTHY" else 1
+
+
+def doctor_export_policy(project_root: Path, policy: dict) -> tuple[Path, Path]:
+    if policy.get("schema_version") != 1:
+        raise InstallationError("Unsupported export policy schema")
+    apex = policy.get("apex")
+    release = policy.get("database_release")
+    pending = policy.get("pending")
+    retention = policy.get("retention")
+    if not all(isinstance(value, dict) for value in (apex, release, pending, retention)):
+        raise InstallationError("Export policy sections are incomplete")
+    if apex.get("official_export_scope") != "complete-application":
+        raise InstallationError("Official APEX export scope must be complete-application")
+    if release.get("default_scope") not in {"full", "partial"}:
+        raise InstallationError("Database release default scope is invalid")
+    if release.get("five_file_groups") != [
+        "package_specs",
+        "views",
+        "package_bodies",
+        "triggers",
+        "compile_objects",
+    ]:
+        raise InstallationError("Database release five-file groups are invalid")
+    output_directory = release.get("output_directory")
+    if not isinstance(output_directory, str) or not output_directory.strip():
+        raise InstallationError("Database release output directory is invalid")
+    safe_project_path(project_root, output_directory)
+    compile_routine = release.get("compile_routine")
+    if compile_routine is not None and not (
+        isinstance(compile_routine, str)
+        and re.fullmatch(
+            r"[A-Za-z][A-Za-z0-9_$#]*(?:\.[A-Za-z][A-Za-z0-9_$#]*)?",
+            compile_routine,
+        )
+    ):
+        raise InstallationError("Database compile routine is invalid")
+    if pending.get("allow_apex_components") is not False or pending.get(
+        "allow_standalone_object_source"
+    ) is not False:
+        raise InstallationError("Pending policy must reject APEX and standalone object source")
+    directory = pending.get("directory")
+    ddl_file = pending.get("ddl_file")
+    dml_file = pending.get("dml_file")
+    if not isinstance(directory, str) or not directory.strip():
+        raise InstallationError("Pending directory is invalid")
+    for filename in (ddl_file, dml_file):
+        if not (
+            isinstance(filename, str)
+            and Path(filename).name == filename
+            and filename.endswith(".sql")
+        ):
+            raise InstallationError("Pending filename is invalid")
+    if ddl_file == dml_file:
+        raise InstallationError("Pending DDL and DML filenames must differ")
+    repository_retention = retention.get("repository_releases")
+    database_retention = retention.get("database_snapshots")
+    if not isinstance(repository_retention, dict) or not isinstance(database_retention, dict):
+        raise InstallationError("Retention policy is incomplete")
+    if repository_retention.get("mode") not in {"report", "prune"}:
+        raise InstallationError("Repository retention mode is invalid")
+    if not isinstance(database_retention.get("enabled"), bool):
+        raise InstallationError("Database retention enabled flag is invalid")
+    package = database_retention.get("package")
+    if not isinstance(package, str) or not re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9_$#]*", package
+    ):
+        raise InstallationError("Database retention package is invalid")
+    for value in (
+        retention.get("review_every_releases"),
+        repository_retention.get("keep_latest"),
+        database_retention.get("keep_months"),
+        database_retention.get("keep_scripts"),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise InstallationError("Retention counts must be positive integers")
+    return (
+        safe_project_path(project_root, Path(directory) / ddl_file),
+        safe_project_path(project_root, Path(directory) / dml_file),
+    )
+
+
+def command_doctor(args: argparse.Namespace) -> int:
+    project_root = args.project_root.resolve()
+    validate_project_root(project_root)
+    manifest = load_manifest(project_root)
+    inspection = inspect_installation(project_root, manifest)
+    print_inspection(inspection)
+    if manifest is None or inspection["status"] != "HEALTHY":
+        print("DOCTOR BLOCKED managed_installation_not_healthy")
+        return 1
+
+    compatibility = manifest.get("compatibility", {})
+    print(f"KIT_VERSION {compatibility.get('kit_version', 'UNKNOWN')}")
+    advisories: list[str] = []
+
+    profile = safe_project_path(project_root, ".oracle-apex-ai/project-profile.md")
+    if not profile.is_file():
+        advisories.append("project_profile_missing")
+    else:
+        content = profile.read_text(encoding="utf-8", errors="strict")
+        match = re.search(
+            r"oracle-apex-ai-project-profile-version:\s*(\d+)", content
+        )
+        installed_version = int(match.group(1)) if match else None
+        if installed_version == PROJECT_PROFILE_VERSION:
+            print(f"PROJECT_PROFILE_VERSION {installed_version} OK")
+        else:
+            print(
+                "PROJECT_PROFILE_VERSION "
+                f"{installed_version if installed_version is not None else 'UNKNOWN'} "
+                f"EXPECTED {PROJECT_PROFILE_VERSION}"
+            )
+            advisories.append("project_profile_merge_required")
+
+    patterns = safe_project_path(project_root, ".oracle-apex-ai/app-patterns.md")
+    if patterns.is_file():
+        print("APP_PATTERNS PRESENT")
+    else:
+        advisories.append("app_patterns_missing")
+
+    policy_path = safe_project_path(project_root, EXPORT_POLICY_PATH)
+    if not policy_path.is_file():
+        advisories.append("export_policy_missing")
+    else:
+        try:
+            policy = read_json(policy_path)
+            ddl, dml = doctor_export_policy(project_root, policy)
+            if not ddl.is_file() or not dml.is_file():
+                advisories.append("configured_pending_files_missing")
+            else:
+                print(f"PENDING_DDL {ddl.relative_to(project_root)}")
+                print(f"PENDING_DML {dml.relative_to(project_root)}")
+            print("EXPORT_POLICY VALID")
+        except (KeyError, TypeError, InstallationError, OSError, UnicodeError):
+            advisories.append("export_policy_invalid")
+
+    print("COMPANIONS EXTERNAL build-apex-brand-reports oracle-apex-echarts")
+    for advisory in advisories:
+        print(f"ADVISORY {advisory}")
+    print(
+        f"DOCTOR {'READY' if not advisories else 'ADVISORY'} count={len(advisories)}"
+    )
+    return 0
 
 
 def load_source(args: argparse.Namespace) -> tuple[Path, dict[str, Path], dict]:
@@ -729,7 +941,7 @@ def command_check(args: argparse.Namespace) -> int:
     if inspection["status"] != "HEALTHY":
         return 1
 
-    _, mapping, metadata = load_source(args)
+    source_root, mapping, metadata = load_source(args)
     plan = build_plan("update", project_root, manifest, mapping)
     changes = [item for item in plan if item[0] != "PRESERVE"]
     if changes:
@@ -740,6 +952,14 @@ def command_check(args: argparse.Namespace) -> int:
         print("UPDATE_AVAILABLE NO")
     print(f"CANDIDATE_REF {metadata['requested_ref']}")
     print(f"CANDIDATE_COMMIT {metadata['resolved_commit']}")
+    print(
+        "INSTALLED_KIT_VERSION "
+        + str(manifest.get("compatibility", {}).get("kit_version", "UNKNOWN"))
+    )
+    print(
+        "CANDIDATE_KIT_VERSION "
+        + str(read_json(source_root / "templates/compatibility.json")["kit_version"])
+    )
     return 0
 
 
@@ -750,9 +970,12 @@ def command_install_or_update(args: argparse.Namespace) -> int:
     source_root, mapping, metadata = load_source(args)
     manifest = load_manifest(project_root)
     plan = build_plan(args.command, project_root, manifest, mapping)
+    initialize_scaffold = (
+        args.command == "install" or args.initialize_missing_project_files
+    )
     scaffold = (
         []
-        if args.command == "update" or args.no_project_scaffold
+        if args.no_project_scaffold or not initialize_scaffold
         else scaffold_plan(project_root, source_root)
     )
 
@@ -820,6 +1043,12 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("--project-root", type=Path, default=Path.cwd())
     status.set_defaults(handler=command_status)
 
+    doctor = subparsers.add_parser(
+        "doctor", help="Inspect managed integrity and project-owned contract readiness."
+    )
+    doctor.add_argument("--project-root", type=Path, default=Path.cwd())
+    doctor.set_defaults(handler=command_doctor)
+
     check = subparsers.add_parser(
         "check", help="Compare an installed project with a local upstream source."
     )
@@ -844,6 +1073,14 @@ def build_parser() -> argparse.ArgumentParser:
             action="store_true",
             help="Do not initialize missing project-owned profile or migration paths.",
         )
+        operation.add_argument(
+            "--initialize-missing-project-files",
+            action="store_true",
+            help=(
+                "During update, create only missing project-owned templates. "
+                "Never overwrite existing profile, patterns, policy, or pending files."
+            ),
+        )
         operation.set_defaults(handler=command_install_or_update)
 
     return parser
@@ -857,7 +1094,7 @@ def main() -> int:
     except InstallationError as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         print(f"ERROR Filesystem operation failed: {exc}", file=sys.stderr)
         return 3
 
