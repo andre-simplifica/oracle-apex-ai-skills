@@ -10,6 +10,9 @@ This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 - Added repository-scoped Codex installation under `.agents/skills` with dry-run, checksummed manifests, upstream commit tracking, drift detection, and project-owned-file preservation.
 - Added `oracle-apex-object-lock` with the complete cooperative `PK_DEV_OBJECT_LOCK` runtime, read-only audit, strict validation, and shared-DEV workflow.
 - Expanded `oracle-apex-export` with temporary inspection, initial full APEX/schema baseline, application snapshot, and normal release modes.
+- Added coordinated parallel export guidance for split/YAML/monolithic APEX
+  snapshots, single-boundary database materialization, atomic promotion,
+  resumable failure handling, and wall-clock/per-lane timing evidence.
 - Defined pending DDL migration lifecycle and release packaging rules.
 - Made Oracle APEX 24.2 the explicit verified target and documented other-version validation boundaries.
 - Added optional routing to Brand Report Kit and Oracle APEX ECharts without making either a dependency.

@@ -47,6 +47,13 @@ Produce:
 
 Use Git history, task scope, owned locks, pending migrations, and DEV object comparison as evidence. Do not export unrelated DEV drift.
 
+If the project profile explicitly defines a full database snapshot release,
+follow that existing contract instead of silently narrowing it to changed
+objects. Capture the database source boundary once and generate every full
+release artifact from the same confirmed snapshot ID. Use
+[parallel-export.md](parallel-export.md) when the canonical workflow supports
+coordinated APEX and database workers.
+
 ## Builder Fallback
 
 Use when SQLcl is unavailable and the project profile permits manual App Builder export.

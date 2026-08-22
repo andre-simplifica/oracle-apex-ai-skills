@@ -118,6 +118,9 @@ class RepositoryContractTests(unittest.TestCase):
             "pending",
             "complete application",
             "structural ddl",
+            "monolithic",
+            "parallel-export.md",
+            "same confirmed snapshot",
         ):
             self.assertIn(term, combined)
 

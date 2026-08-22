@@ -79,6 +79,14 @@ For packages, one `PACKAGE` lock covers both specification and body. The runtime
 - Require readable YAML: yes/no
 - Require monolithic `f<APP_ID>.sql`: yes/no
 - Supporting Objects policy:
+- Treat required APEX formats as one atomic snapshot: yes/no
+- Canonical combined APEX/database export command:
+- Database release scope: changed objects/full snapshot
+- Database snapshot/source identifier and reuse policy:
+- Global SQLcl/session cap for export workers:
+- Target lock behavior:
+- Manifest and per-worker log location:
+- Required timing evidence: wall clock/APEX/database lanes
 - Database baseline path: `db/baseline`
 - Canonical database object source path:
 - Release path pattern: `db/releases/<release>`

@@ -23,6 +23,27 @@ Reconcile the sources. A lock is coordination evidence, not proof that the objec
 - Include newly created object source and any dependency ordering required by the release.
 - Exclude unrelated DEV drift and objects changed by another open task.
 
+## Project-Defined Full Snapshot Releases
+
+Some repositories intentionally publish a complete database-object snapshot for
+each release instead of only changed objects. Use this mode only when the project
+profile and existing repository layout define it.
+
+- Create or select one confirmed source snapshot for the entire release.
+- Generate every object group from that same snapshot identifier.
+- Reconcile inventory counts by type and reject missing, empty, truncated, or
+  error-prefixed source.
+- Generate independent object groups concurrently when the canonical exporter
+  supports it and the global database-session budget permits it.
+- Keep deterministic installation order separate from worker completion order.
+- Preserve prior versioned snapshot sets and complementary release files unless
+  the project explicitly authorizes their removal.
+- On a downstream failure, reuse the already confirmed snapshot after fixing the
+  cause instead of creating a duplicate.
+
+See [parallel-export.md](parallel-export.md) for bundle coordination, atomic
+promotion, failure handling, and timing evidence.
+
 ## Recommended Release Layout
 
 Use the project's existing layout. When none exists:

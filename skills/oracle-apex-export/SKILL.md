@@ -1,6 +1,6 @@
 ---
 name: oracle-apex-export
-description: "Use for Oracle APEX 24.2 export and database source publication: temporary read-only inspection, the first full application/schema baseline, official application snapshots, release exports of changed database objects, and pending DDL migration packaging."
+description: "Use for Oracle APEX 24.2 export and database source publication: temporary read-only inspection, the first full application/schema baseline, official application snapshots, coordinated application/database exports, release exports, and pending DDL migration packaging."
 ---
 
 # Oracle APEX Export
@@ -36,12 +36,24 @@ For official APEX exports:
 - prefer a split source tree containing `install.sql` and `application/`;
 - include `readable/` when the project requires readable YAML;
 - include a monolithic `f<APP_ID>.sql` when the project requires it;
+- do not assume a split export also creates the monolithic file; run the
+  project-approved non-split application export when both forms are required;
+- treat split SQL, readable YAML, and the monolithic file as one atomic
+  application snapshot when the profile requires all three;
 - make the Supporting Objects decision explicit;
 - validate candidate structure and content before replacing the official snapshot;
 - compare the diff to the requested application and scope;
 - keep secrets, credentials, and environment-specific substitutions out of public artifacts.
 
 Use the project's canonical export script when one exists. Do not replace it with a generic command merely because SQLcl can export the application.
+
+## Coordinated and Parallel Exports
+
+When an official request includes multiple independent application or database
+artifacts, read [parallel-export.md](references/parallel-export.md). Parallelize
+only within the project's connection budget and canonical workflow. Workers
+write to private candidates; one coordinator validates and promotes the complete
+bundle. Never publish a partial success.
 
 ## Database Source Contract
 
@@ -71,6 +83,8 @@ Before publication:
 - expected app ID appears in metadata;
 - required split/readable/monolithic structures exist;
 - database object list matches baseline or release mode;
+- every database artifact in a coordinated snapshot uses the same confirmed
+  snapshot or source boundary;
 - SQL scripts have deterministic ordering and valid SQLcl terminators;
 - pending migrations remain pending and are included exactly once;
 - diff is limited to expected files;
@@ -87,6 +101,8 @@ Report:
 - pending migrations included;
 - exclusions and unresolved gaps;
 - candidate validation performed;
+- overall wall-clock time and per-lane durations when the export was timed;
+- manifest/log location when a coordinator produced execution evidence;
 - official snapshot replaced or left unchanged;
 - Git publication status;
 - confirmation that nothing was imported or applied to a target environment.
