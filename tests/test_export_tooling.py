@@ -188,6 +188,42 @@ class ExportToolingTests(unittest.TestCase):
         )
         self.assertIn("RELEASE_BUNDLE OK scope=PARTIAL snapshot=11 files=5", completed.stdout)
 
+    def test_release_validator_ignores_business_error_comments_and_nested_ddl_text(self) -> None:
+        full = self.write_release_bundle(12, "full")
+        specs = full / "snapshot_12_full_01_package_specs.sql"
+        specs.write_text(
+            specs.read_text(encoding="utf-8")
+            + "-- Error code constants\n"
+            + "-- create or replace view VW_NOT_EXPORTED as select 1 from dual;\n",
+            encoding="utf-8",
+        )
+        completed = run_script(
+            "scripts/validate_release_bundle.py",
+            "--directory",
+            str(full),
+            "--snapshot-id",
+            "12",
+            "--scope",
+            "full",
+        )
+        self.assertIn("RELEASE_BUNDLE OK scope=FULL snapshot=12 files=5", completed.stdout)
+
+        specs.write_text(
+            specs.read_text(encoding="utf-8") + "-- ERROR: extraction failed\n",
+            encoding="utf-8",
+        )
+        failed = run_script(
+            "scripts/validate_release_bundle.py",
+            "--directory",
+            str(full),
+            "--snapshot-id",
+            "12",
+            "--scope",
+            "full",
+            expected_returncode=2,
+        )
+        self.assertIn("Extraction error marker", failed.stderr)
+
     def test_retention_is_report_only_by_default_and_guarded_when_applied(self) -> None:
         policy = self.initialize_policy()
         releases = self.project / policy["database_release"]["output_directory"]

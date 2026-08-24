@@ -20,26 +20,26 @@ GROUPS = (
 )
 CREATE_PATTERNS = {
     "PACKAGE": re.compile(
-        r"\bcreate\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+package\s+(?!body\b)(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
-        re.IGNORECASE,
+        r"^\s*create\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+package\s+(?!body\b)(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
+        re.IGNORECASE | re.MULTILINE,
     ),
     "VIEW": re.compile(
-        r"\bcreate\s+or\s+replace(?:\s+force)?(?:\s+(?:editionable|noneditionable))?\s+view\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
-        re.IGNORECASE,
+        r"^\s*create\s+or\s+replace(?:\s+force)?(?:\s+(?:editionable|noneditionable))?\s+view\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
+        re.IGNORECASE | re.MULTILINE,
     ),
     "PACKAGE BODY": re.compile(
-        r"\bcreate\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+package\s+body\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
-        re.IGNORECASE,
+        r"^\s*create\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+package\s+body\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
+        re.IGNORECASE | re.MULTILINE,
     ),
     "TRIGGER": re.compile(
-        r"\bcreate\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+trigger\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
-        re.IGNORECASE,
+        r"^\s*create\s+or\s+replace(?:\s+(?:editionable|noneditionable))?\s+trigger\s+(?:\"([^\"]+)\"|([A-Za-z0-9_$#]+))",
+        re.IGNORECASE | re.MULTILINE,
     ),
 }
 ANY_OBJECT_CREATE = re.compile(
-    r"\bcreate\s+or\s+replace(?:\s+force)?(?:\s+(?:editionable|noneditionable))?\s+"
+    r"^\s*create\s+or\s+replace(?:\s+force)?(?:\s+(?:editionable|noneditionable))?\s+"
     r"(package\s+body|type\s+body|materialized\s+view|package|procedure|function|view|trigger|type|synonym)\b",
-    re.IGNORECASE,
+    re.IGNORECASE | re.MULTILINE,
 )
 HIGH_CONFIDENCE_SECRET_RE = re.compile(
     r"(?i)(?:-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----"
@@ -52,6 +52,7 @@ QUOTED_SECRET_ASSIGNMENT_RE = re.compile(
 PLACEHOLDER_RE = re.compile(
     r"(?i)(?:placeholder|changeme|change_me|replace_me|example|dummy|password|secret|your[_ -])"
 )
+EXTRACTION_ERROR_RE = re.compile(r"(?mi)^\s*--\s*(?:ERROR|ERRO)\s*:")
 
 
 class BundleError(RuntimeError):
@@ -115,7 +116,7 @@ def validate_file(
     searchable = strip_comments_and_literals(content)
     if not content.strip() or "\x00" in content:
         raise BundleError(f"Empty or invalid release file: {path.name}")
-    if re.search(r"(?mi)^\s*--\s*(?:ERROR|ERRO)\b", content):
+    if EXTRACTION_ERROR_RE.search(content):
         raise BundleError(f"Extraction error marker found in {path.name}")
     if contains_potential_secret(content):
         raise BundleError(f"Potential secret material found in {path.name}")
@@ -147,9 +148,9 @@ def validate_file(
             )
         return count
 
-    names = object_names(searchable, object_type)
+    names = object_names(content, object_type)
     foreign_creates = []
-    for match in ANY_OBJECT_CREATE.finditer(searchable):
+    for match in ANY_OBJECT_CREATE.finditer(content):
         detected = re.sub(r"\s+", " ", match.group(1).upper())
         if detected != object_type:
             foreign_creates.append(detected)

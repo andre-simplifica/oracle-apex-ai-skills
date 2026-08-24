@@ -6,6 +6,11 @@ This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 
 ## Unreleased
 
+## 2026-08-24 - 1.2.1
+
+- Hardened the generic five-file database release validator so business comments such as `Error code constants` are not mistaken for extraction failures.
+- Restricted exported-object detection to top-level DDL lines, preventing comments and nested PL/SQL text from being counted as release objects.
+
 ## 2026-08-24 - 1.2.0
 
 - Added a deterministic Oracle APEX version validator with a 24.2 kit minimum, an accurate 22.2 Dynamic Content product gate, a 26.1 public-API gate, and explicit requirement checks.

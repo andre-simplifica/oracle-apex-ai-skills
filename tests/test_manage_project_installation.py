@@ -189,7 +189,7 @@ class ProjectInstallationTests(unittest.TestCase):
         self.assertNotIn(
             ".oracle-apex-ai/project-profile.md", manifest["managed_files"]
         )
-        self.assertEqual(manifest["compatibility"]["kit_version"], "1.2.0")
+        self.assertEqual(manifest["compatibility"]["kit_version"], "1.2.1")
         self.assertEqual(
             manifest["compatibility"]["apex_minimum_supported"], "24.2"
         )

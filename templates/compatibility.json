@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "kit": "oracle-apex-ai-skills",
-  "kit_version": "1.2.0",
+  "kit_version": "1.2.1",
   "apex": {
     "minimum_supported": "24.2",
     "verified": [
