@@ -10,7 +10,7 @@ The supported baseline is **Oracle APEX 24.2** with deterministic gates for APEX
 | APEX 24.2 through releases before 26.1 | Supported legacy readable-YAML export contract |
 | APEX 26.1 or later | Supported 26.1 API catalog; standard SQL-only application export contract |
 
-The consuming project receives `.oracle-apex-ai/compatibility.json`, which records kit version `1.2.1`, the 24.2 minimum, the 26.1 feature gate, the disabled APEXlang policy, the required cooperative object-lock runtime, and optional external companion repositories.
+The consuming project receives `.oracle-apex-ai/compatibility.json`, which records kit version `1.2.2`, the 24.2 minimum, the 26.1 feature gate, the disabled APEXlang policy, the required cooperative object-lock runtime, and optional external companion repositories.
 
 ## Responsibilities
 

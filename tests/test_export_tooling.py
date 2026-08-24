@@ -338,6 +338,43 @@ class ExportToolingTests(unittest.TestCase):
         )
         self.assertIn("APEXlang artifacts are disabled", completed.stderr)
 
+    def test_apex_validator_allows_redacted_bearer_examples(self) -> None:
+        root = self.write_apex_export(include_readable=False)
+        with (root / "application/pages/page_00001.sql").open(
+            "a", encoding="utf-8"
+        ) as handle:
+            handle.write("-- Authorization: Bearer abcdefgh........ijklmnopqrst\n")
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "26.1",
+        )
+        self.assertIn("APEX_EXPORT OK", completed.stdout)
+
+    def test_apex_validator_rejects_unredacted_bearer_values(self) -> None:
+        root = self.write_apex_export(include_readable=False)
+        with (root / "application/pages/page_00001.sql").open(
+            "a", encoding="utf-8"
+        ) as handle:
+            handle.write(
+                "-- Authorization: Bearer abcdefghijklmnopqrstuvwxyz012345\n"
+            )
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "26.1",
+            expected_returncode=2,
+        )
+        self.assertIn("Potential secret material", completed.stderr)
+
     def test_apex_validator_rejects_versions_below_24_2(self) -> None:
         root = self.write_apex_export(include_readable=True)
         completed = run_script(

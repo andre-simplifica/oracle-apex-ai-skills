@@ -19,9 +19,12 @@ APP_ID_RE_TEMPLATE = r"\bp_default_application_id\s*=>\s*{app_id}\b"
 PAGE_FILE_RE = re.compile(r"page_(\d+)\.sql$", re.IGNORECASE)
 YAML_PAGE_RE = re.compile(r"(?:page_|p)(\d+)\.ya?ml$", re.IGNORECASE)
 HIGH_CONFIDENCE_SECRET_RE = re.compile(
-    r"(?i)(?:-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----"
-    r"|authorization\s*[:=]\s*bearer\s+[A-Za-z0-9._-]{20,})"
+    r"(?i)-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----"
 )
+BEARER_SECRET_RE = re.compile(
+    r"(?i)authorization\s*[:=]\s*bearer\s+(?P<value>[A-Za-z0-9._-]{20,})"
+)
+REDACTED_VALUE_RE = re.compile(r"\.{3,}")
 QUOTED_SECRET_ASSIGNMENT_RE = re.compile(
     r"(?i)(password|client_secret|api_key)\s*(?:=>|:|=)\s*"
     r"(?P<quote>['\"])(?P<value>[^'\"\r\n]{8,})(?P=quote)"
@@ -42,6 +45,9 @@ def read_text(path: Path) -> str:
 def contains_potential_secret(content: str) -> bool:
     if HIGH_CONFIDENCE_SECRET_RE.search(content):
         return True
+    for match in BEARER_SECRET_RE.finditer(content):
+        if not REDACTED_VALUE_RE.search(match.group("value")):
+            return True
     for match in QUOTED_SECRET_ASSIGNMENT_RE.finditer(content):
         value = match.group("value").strip()
         if value.startswith(("<", "&", "#", "${", "{{")) or PLACEHOLDER_RE.search(value):

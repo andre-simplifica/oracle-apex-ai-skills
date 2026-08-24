@@ -140,7 +140,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(
             compatibility["database"]["object_lock_runtime_required"], "1.1.0"
         )
-        self.assertEqual(compatibility["kit_version"], "1.2.1")
+        self.assertEqual(compatibility["kit_version"], "1.2.2")
         self.assertEqual(
             (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip(),
             compatibility["kit_version"],
