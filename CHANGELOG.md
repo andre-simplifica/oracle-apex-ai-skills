@@ -6,6 +6,17 @@ This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 
 ## Unreleased
 
+## 2026-08-24 - 1.2.0
+
+- Added a deterministic Oracle APEX version validator with a 24.2 kit minimum, an accurate 22.2 Dynamic Content product gate, a 26.1 public-API gate, and explicit requirement checks.
+- Added managed compatibility helpers to every consuming project and integrated optional live-version checks into `doctor`.
+- Defined version-specific official application exports: split SQL + readable YAML + monolithic SQL before 26.1, and split SQL + monolithic SQL from 26.1 onward.
+- Disabled APEXlang generation, export, parsing, editing, validation, compilation, and import across every supported release; 26.1 product availability is informational only.
+- Updated the APEX export validator to require the confirmed APEX version, reject APEXlang artifacts, block releases below 24.2, and accept quoted `p_version_scn` values from 26.1 SQL exports.
+- Added an APEX 26.1 public API catalog, live-signature gates, Static ID/DOM migration guidance, and deprecation checks.
+- Added backward-compatible installation updates for pre-1.1 manifests and schema-v1 project policies while introducing the schema-v2 project export contract.
+- Updated public documentation, project-profile scaffolding, compatibility schemas, and release guidance for equivalent APEX 24.2 and 26.1+ operation without APEXlang.
+
 ## 2026-08-22 - 1.1.0
 
 - Added `oracle-apex-ai-skills` as the main router and project installation/update contract.

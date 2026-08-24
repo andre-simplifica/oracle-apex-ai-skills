@@ -1,6 +1,6 @@
 # Contributing
 
-This project standardizes AI-assisted development for Oracle APEX 24.2.
+This project standardizes AI-assisted development for supported Oracle APEX releases from 24.2 onward.
 
 ## Main Rule
 
@@ -24,7 +24,8 @@ If a rule depends on a package, page, theme, menu, breadcrumb, naming convention
 - Is the change generic enough for other APEX projects?
 - Does the text avoid credentials, private URLs, customer names, and private screenshots?
 - Did you remove real schema names, workspace names, hostnames, internal URLs, production payloads, and customer data?
-- Does the rule mention APEX 24.2 or SQLcl when version behavior matters?
+- Does the rule enforce the 24.2 minimum and the 26.1 feature gate when version behavior matters?
+- Does the change keep APEXlang generation, export, validation, compilation, and import outside this repository?
 - Does the workflow state when runtime validation is required?
 - Does the local project profile remain separate from the core?
 - Does a project update preserve profiles, patterns, and migrations?

@@ -1,19 +1,20 @@
 ---
 name: oracle-apex-ai-skills
-description: Use as the main entry point for installing, updating, or applying the repository-managed Oracle APEX 24.2 skill kit in a project. Route APEX development, project learning, cooperative database object locks, complete application exports, full/partial database releases, retention, and pending DDL/DML while preserving project-owned standards.
+description: Use as the main entry point for installing, updating, or applying the repository-managed Oracle APEX 24.2+ skill kit in a project. Route version-gated APEX development, project learning, cooperative database object locks, complete SQL application exports, database releases, retention, and pending DDL/DML while preserving project-owned standards.
 ---
 
 # Oracle APEX AI Skills
 
-Use this skill as the project-level router for the Oracle APEX AI Skills kit. The kit targets Oracle APEX 24.2 and works by itself. Optional reporting, document, and chart skills may improve a task but are never required.
+Use this skill as the project-level router for the Oracle APEX AI Skills kit. The supported baseline is Oracle APEX 24.2, with explicit feature gates for APEX 26.1 and later. Optional reporting, document, and chart skills may improve a task but are never required.
 
 ## Start Every Task
 
 1. Read repository instructions such as `AGENTS.md`.
 2. Read `.oracle-apex-ai/project-profile.md`, `.oracle-apex-ai/app-patterns.md`, and `.oracle-apex-ai/export-policy.json` when present.
 3. Inspect `.oracle-apex-ai/installation-manifest.json`, `.oracle-apex-ai/upstream-lock.json`, and `.oracle-apex-ai/compatibility.json` to identify the installed kit version, APEX target, and required lock runtime.
-4. Classify the request with [routing.md](references/routing.md).
-5. Separate read-only inspection, database mutation, APEX import, and Git publication. Do not infer authorization for one from another.
+4. Confirm the live APEX version before using version-specific exports or APIs. Run `Util/scripts/validate_oracle_apex_compatibility.py --apex-version <confirmed-version>` when installed, then read [apex-version-compatibility.md](../oracle-apex-dev/references/apex-version-compatibility.md).
+5. Classify the request with [routing.md](references/routing.md).
+6. Separate read-only inspection, database mutation, APEX import, and Git publication. Do not infer authorization for one from another.
 
 ## Route the Request
 
@@ -51,7 +52,10 @@ Inspect local modifications and the installed upstream commit, fetch or clone th
 ## Mandatory Boundaries
 
 - Call this a **skill kit** or **skills**, not a plugin.
-- Treat APEX 24.2 as the verified target. For another APEX version, identify and validate compatibility differences before implementation.
+- Refuse normal kit workflows below APEX 24.2. This is the supported-project baseline; it is not a claim that every individual APEX feature was introduced in 24.2.
+- On APEX 24.2 through releases before 26.1, use the legacy SQL split + readable YAML + monolithic SQL export contract.
+- On APEX 26.1 or later, allow documented 26.1 public APIs only after the version gate, and use SQL split + monolithic SQL for official application exports.
+- APEXlang may exist in the installed Oracle product from 26.1 onward, but this kit must not generate, export, parse, edit, validate, compile, or import APEXlang. Route future APEXlang work to a separate project.
 - Never invent application objects, paths, IDs, schemas, connections, or business rules.
 - Never overwrite project-owned files under `.oracle-apex-ai/`, except the generated manifest, upstream lock, and compatibility record managed by the installer.
 - Keep table/structural DDL and reviewed DML in the two configured pending files. Never put APEX components or standalone object source there.

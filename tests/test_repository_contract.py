@@ -115,12 +115,32 @@ class RepositoryContractTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(compatibility["apex"]["target"], "24.2")
+        self.assertEqual(compatibility["schema_version"], 2)
+        self.assertEqual(compatibility["apex"]["minimum_supported"], "24.2")
+        self.assertEqual(
+            compatibility["apex"]["feature_gates"][
+                "dynamic_content_return_clob"
+            ],
+            "22.2",
+        )
+        self.assertEqual(
+            compatibility["apex"]["feature_gates"]["apex_26_1_public_apis"],
+            "26.1",
+        )
+        self.assertEqual(compatibility["apex"]["apexlang_policy"], "disabled")
+        self.assertEqual(
+            compatibility["apex"]["official_export_before_26_1"],
+            ["split-sql", "readable-yaml", "monolithic-sql"],
+        )
+        self.assertEqual(
+            compatibility["apex"]["official_export_from_26_1"],
+            ["split-sql", "monolithic-sql"],
+        )
         self.assertEqual(set(compatibility["core_skills"]), EXPECTED_SKILLS)
         self.assertEqual(
             compatibility["database"]["object_lock_runtime_required"], "1.1.0"
         )
-        self.assertEqual(compatibility["kit_version"], "1.1.0")
+        self.assertEqual(compatibility["kit_version"], "1.2.0")
         self.assertEqual(
             (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip(),
             compatibility["kit_version"],
@@ -168,11 +188,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(policy["pending"]["dml_file"], "pending_dml.sql")
         self.assertFalse(policy["pending"]["allow_apex_components"])
         self.assertFalse(policy["pending"]["allow_standalone_object_source"])
+        self.assertEqual(policy["schema_version"], 2)
+        self.assertEqual(policy["apex"]["readable_yaml_mode"], "before-26.1")
+        self.assertEqual(policy["apex"]["apexlang_policy"], "disabled")
 
     def test_managed_export_tools_are_present(self) -> None:
         for relative in (
             "scripts/check_pending_migrations.py",
             "scripts/manage_export_retention.py",
+            "scripts/apex_version.py",
+            "scripts/validate_apex_compatibility.py",
             "scripts/validate_apex_export.py",
             "scripts/validate_release_bundle.py",
         ):

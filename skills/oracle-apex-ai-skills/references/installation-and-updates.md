@@ -23,6 +23,8 @@ The installer manages:
 Util/scripts/manage_oracle_apex_ai_skills.py
 Util/scripts/check_oracle_apex_pending.py
 Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/apex_version.py
+Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
 ```
@@ -59,7 +61,7 @@ python3 <source>/scripts/manage_project_installation.py install \
 
 7. Explain every create, update, preserve, and conflict action.
 8. Run the same command without `--dry-run`.
-9. Run `status` and `doctor`, then inspect the Git diff.
+9. Run `status` and `doctor`, then inspect the Git diff. When the live APEX version is confirmed, run `doctor --apex-version <version>` and the standalone compatibility validator.
 10. Audit the object-lock runtime separately. Do not connect automatically during file installation.
 
 If the project already contains a profile or patterns, preserve them byte-for-byte.
@@ -117,6 +119,8 @@ An update does not:
 - commit, push, merge, or open a PR.
 
 If the compatibility record requires a newer object-lock runtime, report the migration and request separate DEV authorization.
+
+The update never enables APEXlang. APEX 26.1 or later only enables the documented public-API knowledge gate and changes the official application export contract to standard split SQL plus monolithic SQL.
 
 ## Transparent Status
 

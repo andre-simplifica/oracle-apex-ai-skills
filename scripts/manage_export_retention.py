@@ -47,7 +47,7 @@ def safe_path(project_root: Path, relative: str) -> Path:
 def load_policy(project_root: Path, config: Path) -> dict:
     path = config if config.is_absolute() else safe_path(project_root, str(config))
     policy = read_json(path)
-    if policy.get("schema_version") != 1:
+    if policy.get("schema_version") not in {1, 2}:
         raise RetentionError("Unsupported export-policy schema_version")
     release = policy.get("database_release")
     retention = policy.get("retention")

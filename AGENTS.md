@@ -6,7 +6,7 @@ This repository is the reusable Oracle APEX AI Skills project.
 
 - Repository: `andre-simplifica/oracle-apex-ai-skills`
 - Audience: Oracle APEX developers, PL/SQL developers, Oracle OCI users, and AI-assisted development practitioners
-- Main target: Oracle APEX 24.2
+- Supported baseline: Oracle APEX 24.2, with explicit gates for APEX 26.1 and later
 - Core purpose: provide reusable skills, templates, scripts, and documentation that help AI agents work safely with Oracle APEX projects.
 
 ## Working Rules
@@ -16,6 +16,7 @@ This repository is the reusable Oracle APEX AI Skills project.
 - Keep this repository generic and reusable. Do not add company-specific, customer-specific, or application-specific rules to the core.
 - Do not include private schema names, workspace names, hostnames, internal URLs, credentials, production payloads, or customer data.
 - Do not invent APEX, SQLcl, PL/SQL, OCI, Codex, Claude Code, or GitHub behavior. Verify current files before changing instructions.
+- Keep APEXlang generation, export, validation, compilation, and import outside this repository. On APEX 26.1 or later, use standard SQL exports and version-gated public APIs only.
 - Prefer small, explicit, production-friendly guidance over broad abstractions.
 - Keep documentation and skill content in English, except `README.pt-BR.md`, which is the Portuguese onboarding document.
 

@@ -34,6 +34,10 @@
       "additionalProperties": false,
       "required": [
         "apex_target",
+        "apex_minimum_supported",
+        "dynamic_content_from",
+        "apex_26_1_features_from",
+        "apexlang_policy",
         "object_lock_runtime_required"
       ],
       "properties": {
@@ -42,6 +46,18 @@
         },
         "apex_target": {
           "type": "string"
+        },
+        "apex_minimum_supported": {
+          "const": "24.2"
+        },
+        "dynamic_content_from": {
+          "const": "22.2"
+        },
+        "apex_26_1_features_from": {
+          "const": "26.1"
+        },
+        "apexlang_policy": {
+          "const": "disabled"
         },
         "object_lock_runtime_required": {
           "type": "string"

@@ -11,6 +11,8 @@ Use SQLcl as the reproducible technical route for Oracle Database and APEX.
 - `user_errors`, `user_objects`, logs, staging, and history.
 - Idempotent scripts.
 
+Before a version-specific APEX command, confirm the live APEX version and run `validate_oracle_apex_compatibility.py`. SQLcl's local help can expose commands that the connected APEX release does not support or that this repository deliberately disables.
+
 ## SQL vs SQLcl
 
 Classify before running:
@@ -64,3 +66,4 @@ Do not close as done if a changed object is invalid.
 - Do not bypass an active cooperative lock with a direct SQLcl compilation.
 - Make `commit` or `rollback` explicit in scripts that change data/metadata.
 - Do not run APEX imports by trial and error.
+- Do not run APEXlang generate, export, validate, or import commands. From APEX 26.1 onward, use standard SQL application exports and omit `READABLE_YAML` because Oracle maps that readable request to APEXlang.

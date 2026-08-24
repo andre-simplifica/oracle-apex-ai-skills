@@ -22,8 +22,10 @@ When the canonical exporter supports it:
 
 1. Start the APEX application lane and database snapshot lane independently.
 2. In the APEX lane, generate split SQL plus readable YAML in one private
-   scratch root and the monolithic application file in another. These exports
-   may run concurrently when the connection budget permits it.
+   scratch root only when the confirmed APEX release is before 26.1. On APEX
+   26.1 or later, generate split SQL without a readable format. Generate the
+   monolithic SQL application file in another worker. These exports may run
+   concurrently when the connection budget permits it.
 3. Capture the database snapshot once. Internal metadata capture may remain
    serial; do not describe it as parallel unless the database implementation
    actually is.
@@ -45,6 +47,9 @@ metadata. Do not combine files from different export windows. Treat a checksum
 as diagnostic when the export operation itself can change it; use the complete
 metadata and inventory contract defined by the project as the authoritative
 gate.
+
+APEXlang is not an additional worker. Reject APEXlang artifacts and commands,
+even when the connected APEX and SQLcl versions expose them.
 
 For database artifacts:
 
@@ -77,7 +82,7 @@ For database artifacts:
 For a timed run, record:
 
 - external wall-clock start, finish, and total duration;
-- APEX lane duration and, when available, split/readable and monolithic worker
+- APEX lane duration and, when available, split/readable-YAML and monolithic worker
   durations;
 - database snapshot duration;
 - schema/reference and release materialization durations;

@@ -26,7 +26,7 @@ flowchart TD
     B -. "when relevant and installed" .-> H["Brand reports or ECharts"]
 ```
 
-The kit targets Oracle APEX 24.2. Other versions require compatibility validation.
+The kit supports Oracle APEX 24.2 and later. A deterministic gate blocks older releases and prevents 26.1 APIs from being used before 26.1. APEXlang remains disabled even when the product exposes it.
 
 ## Consuming-Project Installation
 
@@ -45,6 +45,8 @@ The project manager also writes:
 Util/scripts/manage_oracle_apex_ai_skills.py
 Util/scripts/check_oracle_apex_pending.py
 Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/apex_version.py
+Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
 ```
@@ -99,8 +101,10 @@ The first baseline and normal releases are different:
 | --- | --- | --- |
 | Initial baseline | Complete application | Complete application-schema structure |
 | Daily development | No official export by default | Canonical object edits + pending DDL/DML |
-| Partial release | Complete split/readable/monolithic application | Five files with new/changed objects from one base snapshot + pending DDL/DML |
-| Full release | Complete split/readable/monolithic application | Five files with all supported objects + pending DDL/DML |
+| Partial release | Complete version-gated standard SQL application export | Five files with new/changed objects from one base snapshot + pending DDL/DML |
+| Full release | Complete version-gated standard SQL application export | Five files with all supported objects + pending DDL/DML |
+
+Before APEX 26.1, the application contract includes readable YAML. From APEX 26.1 onward it omits readable YAML because Oracle maps it to APEXlang. APEXlang source and commands are never part of this architecture.
 
 Pending is one directory with exactly two configured files. Table/constraint/index/sequence structural changes use the DDL file; reviewed corrections/backfills/seed data use the DML file. APEX components and standalone object source never go there. Release generation does not mark either file as applied.
 

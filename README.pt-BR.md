@@ -76,7 +76,7 @@ Aqui, "vibe coding" não significa fazer no chute. Significa dar contexto, padr�
 
 ## O que é isto
 
-Este é um conjunto reutilizável de skills para agentes de IA trabalhando com **Oracle APEX 24.2**.
+Este é um conjunto reutilizável de skills para agentes de IA trabalhando com versões suportadas do **Oracle APEX 24.2 em diante**.
 
 Ele ajuda ferramentas como Codex, Claude Code e outros agentes a entender como trabalho APEX deve ser feito:
 
@@ -103,8 +103,13 @@ O conjunto básico funciona sozinho. Layouts de relatório/ajuda com identidade 
 
 | Versão | Status |
 | --- | --- |
-| APEX 24.2 | Alvo de projeto verificado |
-| Qualquer outra versão do APEX | Não verificada; valide exports, assinaturas de API, metadados e comportamento runtime antes de usar |
+| Abaixo do APEX 24.2 | Não suportado por este conjunto |
+| APEX 24.2 até versões anteriores à 26.1 | Suportado; export padrão com SQL dividido + YAML legível + SQL monolítico |
+| APEX 26.1 ou superior | Suportado; APIs públicas 26.1 têm trava por versão e o export oficial permanece SQL dividido + SQL monolítico |
+
+APEXlang é uma capacidade do produto a partir do APEX/SQLcl 26.1, mas fica deliberadamente desativado aqui. Estas skills não geram, exportam, interpretam, editam, validam, compilam ou importam APEXlang. Consulte [compatibilidade por versão do Oracle APEX](skills/oracle-apex-dev/references/apex-version-compatibility.md).
+
+O limite 24.2 é a linha de suporte deste conjunto. A Oracle introduziu a região nativa Dynamic Content com retorno CLOB no APEX 22.2; o validador registra esse fato do produto, mas continua bloqueando o conjunto como não suportado abaixo de 24.2.
 
 ## Para quem é
 
@@ -156,6 +161,8 @@ A instalação cria ou gerencia:
 Util/scripts/manage_oracle_apex_ai_skills.py
 Util/scripts/check_oracle_apex_pending.py
 Util/scripts/manage_oracle_apex_export_retention.py
+Util/scripts/apex_version.py
+Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
 ```
@@ -233,7 +240,7 @@ O ponto principal não é decorar comando. O ponto é dar contexto real do proje
 
 Diga **“inicialize a versão 1”** somente quando ainda não existir uma fonte completa versionada. Esse modo exporta toda a aplicação APEX e todo o DDL estrutural do schema da aplicação: tabelas, constraints, índices, sequences, types, views, packages, rotinas, triggers, synonyms e grants explícitos necessários. Dados de tabelas, segredos, usuários, wallets e schemas de sistema ou sem relação com a aplicação ficam de fora.
 
-No desenvolvimento normal, nenhum export oficial é gerado por padrão. Quando você pedir explicitamente um release, a parte APEX é sempre completa: SQL dividido, YAML legível e `f<APP_ID>.sql` monolítico. A parte de banco pode ser `partial` (objetos novos/alterados comparados com um snapshot-base explícito) ou `full` (todos os objetos suportados), sempre nos mesmos cinco arquivos determinísticos. O pending tem exatamente dois arquivos configurados: DDL e DML. Componentes APEX e fontes avulsas de package/view/trigger/rotina/type/synonym são proibidos ali.
+No desenvolvimento normal, nenhum export oficial é gerado por padrão. Quando você pedir explicitamente um release, a parte APEX é completa e depende da versão: antes do APEX 26.1 contém SQL dividido, YAML legível e `f<APP_ID>.sql`; no APEX 26.1 ou superior contém somente SQL dividido e o SQL monolítico. APEXlang permanece proibido. A parte de banco pode ser `partial` (objetos novos/alterados comparados com um snapshot-base explícito) ou `full` (todos os objetos suportados), sempre nos mesmos cinco arquivos determinísticos. O pending tem exatamente dois arquivos configurados: DDL e DML. Componentes APEX e fontes avulsas de package/view/trigger/rotina/type/synonym são proibidos ali.
 
 ### Object locks cooperativos
 

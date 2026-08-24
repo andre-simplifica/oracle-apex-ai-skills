@@ -115,6 +115,6 @@ bash scripts/validate_repo.sh
 6. Review the complete diff for private identifiers and secrets.
 7. Commit, push the branch, and open a pull request according to repository rules.
 
-Good core contributions include APEX 24.2 guardrails, SQLcl/export improvements, full/partial five-file release logic, pending/retention validation, cooperative-lock improvements, deterministic installer behavior, and clearer project templates.
+Good core contributions include APEX 24.2+ version gates, SQLcl/standard-SQL export improvements, public API catalogs, full/partial five-file release logic, pending/retention validation, cooperative-lock improvements, deterministic installer behavior, and clearer project templates. APEXlang workflows belong in a separate repository.
 
 Package names, page IDs, customer rules, private environment names, and application-specific UI conventions belong in the consuming project's `.oracle-apex-ai/` files.

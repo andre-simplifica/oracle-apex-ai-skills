@@ -6,7 +6,7 @@ This guide assumes you know Oracle APEX, PL/SQL, Page Designer, and SQL Develope
 
 A skill is a set of instructions that teaches an AI agent how to work in a specific way.
 
-In this case, the skill teaches the agent to work with Oracle APEX 24.2 while respecting:
+In this case, the skill teaches the agent to work with supported Oracle APEX releases from 24.2 onward, with explicit 26.1 feature gates, while respecting:
 
 - Page Designer;
 - SQLcl;
@@ -29,6 +29,8 @@ The skill does not replace engineering judgment. It should not:
 - edit versioned APEX exports as the default implementation path;
 - hide compilation errors;
 - ignore the visual standard of the project.
+- use a 26.1 API on a 24.2 environment;
+- generate, export, validate, compile, or import APEXlang.
 
 Installing the skill files does not install database objects. The lock runtime is cooperative rather than a hard Oracle DDL block. The kit also does not create an official export, apply pending DDL/DML, purge history, or import APEX unless that separate operation is explicitly requested and authorized.
 

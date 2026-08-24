@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate an atomic Oracle APEX 24.2 split/readable/monolithic export."""
+"""Validate the version-gated SQL export contract for Oracle APEX 24.2+."""
 
 from __future__ import annotations
 
@@ -9,8 +9,12 @@ from pathlib import Path
 import re
 import sys
 
+from apex_version import ApexVersionError, evaluate_apex_version
 
-VERSION_SCN_RE = re.compile(r"\bp_version_scn\s*=>\s*(\d+)", re.IGNORECASE)
+
+VERSION_SCN_RE = re.compile(
+    r"\bp_version_scn\s*=>\s*['\"]?(\d+)['\"]?", re.IGNORECASE
+)
 APP_ID_RE_TEMPLATE = r"\bp_default_application_id\s*=>\s*{app_id}\b"
 PAGE_FILE_RE = re.compile(r"page_(\d+)\.sql$", re.IGNORECASE)
 YAML_PAGE_RE = re.compile(r"(?:page_|p)(\d+)\.ya?ml$", re.IGNORECASE)
@@ -71,7 +75,27 @@ def scn_multiset(paths: list[Path]) -> Counter[str]:
     return values
 
 
+def find_apexlang_paths(root: Path) -> list[Path]:
+    hits: list[Path] = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root)
+        lowered_parts = {part.lower() for part in relative.parts}
+        if (
+            "apexlang" in lowered_parts
+            or path.suffix.lower() == ".apx"
+            or path.name.lower() in {"application.apx", "apexlang.json"}
+        ):
+            hits.append(relative)
+    return sorted(set(hits), key=lambda item: item.as_posix())
+
+
 def run(args: argparse.Namespace) -> int:
+    compatibility = evaluate_apex_version(args.apex_version)
+    if not compatibility["supported"]:
+        raise ApexExportError(
+            f"Oracle APEX {compatibility['apex_version']} is below the supported minimum 24.2"
+        )
+
     root = args.root.resolve()
     if not root.is_dir():
         raise ApexExportError(f"APEX export root is missing: {root}")
@@ -80,12 +104,28 @@ def run(args: argparse.Namespace) -> int:
     application = root / "application"
     readable = root / "readable"
     monolithic = root / f"f{args.app_id}.sql"
-    required = (install, application, readable, monolithic)
+    readable_required = compatibility["capabilities"]["readable_yaml_export"]
+    required = (install, application, monolithic)
+    if readable_required:
+        required = (*required, readable)
     missing = [str(path) for path in required if not path.exists()]
     if missing:
         raise ApexExportError("Required APEX artifacts are missing: " + ", ".join(missing))
-    if not application.is_dir() or not readable.is_dir():
-        raise ApexExportError("application/ and readable/ must be directories")
+    if not application.is_dir():
+        raise ApexExportError("application/ must be a directory")
+    if readable_required and not readable.is_dir():
+        raise ApexExportError("readable/ must be a directory before APEX 26.1")
+    if not readable_required and readable.exists():
+        raise ApexExportError(
+            "readable/ is forbidden on APEX 26.1+ because READABLE_YAML produces APEXlang"
+        )
+
+    apexlang_paths = find_apexlang_paths(root)
+    if apexlang_paths:
+        preview = ", ".join(path.as_posix() for path in apexlang_paths[:10])
+        raise ApexExportError(
+            "APEXlang artifacts are disabled by repository policy: " + preview
+        )
     if not re.search(
         r"(?mi)^\s*@@?application/create_application\.sql\s*$",
         read_text(install),
@@ -108,16 +148,18 @@ def run(args: argparse.Namespace) -> int:
             raise ApexExportError("Monolithic export is not AVAILABLE_W_EDIT_LINK")
 
     split_pages = find_pages(application / "pages", PAGE_FILE_RE)
-    readable_pages_root = readable / "application" / "pages"
-    readable_pages = find_pages(readable_pages_root, YAML_PAGE_RE)
     if not split_pages:
         raise ApexExportError("No split APEX pages found")
-    if split_pages != readable_pages:
-        raise ApexExportError(
-            "Split/readable page inventory differs: "
-            f"split_only={sorted(split_pages - readable_pages)} "
-            f"readable_only={sorted(readable_pages - split_pages)}"
-        )
+    readable_pages: set[int] = set()
+    if readable_required:
+        readable_pages_root = readable / "application" / "pages"
+        readable_pages = find_pages(readable_pages_root, YAML_PAGE_RE)
+        if split_pages != readable_pages:
+            raise ApexExportError(
+                "Split/readable page inventory differs: "
+                f"split_only={sorted(split_pages - readable_pages)} "
+                f"readable_only={sorted(readable_pages - split_pages)}"
+            )
 
     split_sql = [
         path
@@ -132,11 +174,16 @@ def run(args: argparse.Namespace) -> int:
             f"split={sum(split_scns.values())} monolithic={sum(monolithic_scns.values())}"
         )
 
-    readable_text = [
-        path
-        for path in readable.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".yaml", ".yml", ".json", ".xml", ".sql"}
-    ]
+    readable_text = (
+        [
+            path
+            for path in readable.rglob("*")
+            if path.is_file()
+            and path.suffix.lower() in {".yaml", ".yml", ".json", ".xml", ".sql"}
+        ]
+        if readable_required
+        else []
+    )
     scanned = [monolithic, *split_sql, *readable_text]
     secret_hits = [
         str(path) for path in scanned if contains_potential_secret(read_text(path))
@@ -151,13 +198,22 @@ def run(args: argparse.Namespace) -> int:
     if args.supporting_objects == "exclude" and supporting_state == "PRESENT":
         raise ApexExportError("Supporting Objects were excluded but found in split source")
 
+    print(
+        "APEX_COMPATIBILITY OK "
+        f"version={compatibility['apex_version']} "
+        f"status={compatibility['support_status']}"
+    )
     print(f"APEX_APPLICATION OK app_id={args.app_id}")
-    print(f"APEX_PAGES OK split={len(split_pages)} readable={len(readable_pages)}")
+    readable_count = str(len(readable_pages)) if readable_required else "NOT_REQUIRED"
+    print(f"APEX_PAGES OK split={len(split_pages)} readable={readable_count}")
     print(
         f"APEX_SCN_INVENTORY OK split={sum(split_scns.values())} monolithic={sum(monolithic_scns.values())}"
     )
     print(f"APEX_SUPPORTING_OBJECTS {supporting_state}")
-    print("APEX_EXPORT OK atomic_formats=split,readable,monolithic")
+    print(
+        "APEX_EXPORT OK atomic_formats="
+        + ",".join(compatibility["official_export_formats"])
+    )
     return 0
 
 
@@ -165,6 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--app-id", type=int, required=True)
+    parser.add_argument("--apex-version", required=True)
     parser.add_argument(
         "--supporting-objects",
         choices=("include", "exclude", "project-defined"),
@@ -183,7 +240,7 @@ def main() -> int:
     args = build_parser().parse_args()
     try:
         return run(args)
-    except (ApexExportError, OSError, UnicodeError) as exc:
+    except (ApexExportError, ApexVersionError, OSError, UnicodeError) as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
 

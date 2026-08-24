@@ -189,10 +189,22 @@ class ProjectInstallationTests(unittest.TestCase):
         self.assertNotIn(
             ".oracle-apex-ai/project-profile.md", manifest["managed_files"]
         )
-        self.assertEqual(manifest["compatibility"]["kit_version"], "1.1.0")
+        self.assertEqual(manifest["compatibility"]["kit_version"], "1.2.0")
+        self.assertEqual(
+            manifest["compatibility"]["apex_minimum_supported"], "24.2"
+        )
+        self.assertEqual(
+            manifest["compatibility"]["dynamic_content_from"], "22.2"
+        )
+        self.assertEqual(
+            manifest["compatibility"]["apex_26_1_features_from"], "26.1"
+        )
+        self.assertEqual(manifest["compatibility"]["apexlang_policy"], "disabled")
         for tool in (
+            "apex_version.py",
             "check_oracle_apex_pending.py",
             "manage_oracle_apex_export_retention.py",
+            "validate_oracle_apex_compatibility.py",
             "validate_oracle_apex_export.py",
             "validate_oracle_apex_release_bundle.py",
         ):
@@ -466,10 +478,61 @@ class ProjectInstallationTests(unittest.TestCase):
             "doctor",
             "--project-root",
             str(self.project),
+            "--apex-version",
+            "26.1.3",
         )
-        self.assertIn("PROJECT_PROFILE_VERSION 2 OK", completed.stdout)
-        self.assertIn("EXPORT_POLICY VALID", completed.stdout)
+        self.assertIn("PROJECT_PROFILE_VERSION 3 OK", completed.stdout)
+        self.assertIn(
+            "EXPORT_POLICY VALID schema=2 readable_yaml=before-26.1 apexlang=disabled",
+            completed.stdout,
+        )
+        self.assertIn("APEX_26_1_PUBLIC_APIS AVAILABLE", completed.stdout)
+        self.assertIn("APEXLANG_SKILL_POLICY DISABLED", completed.stdout)
         self.assertIn("DOCTOR READY count=0", completed.stdout)
+
+    def test_doctor_blocks_unsupported_apex_release(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+        completed = run_manager(
+            "doctor",
+            "--project-root",
+            str(self.project),
+            "--apex-version",
+            "23.2",
+            expected_returncode=1,
+        )
+        self.assertIn("BLOCKER apex_version_below_24_2", completed.stdout)
+        self.assertIn("DOCTOR BLOCKED", completed.stdout)
+
+    def test_doctor_blocks_legacy_readable_policy_on_26_1(self) -> None:
+        run_manager(
+            "install",
+            "--project-root",
+            str(self.project),
+            *self.source_arguments(),
+        )
+        policy_path = self.project / ".oracle-apex-ai" / "export-policy.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["schema_version"] = 1
+        policy["apex"].pop("readable_yaml_mode")
+        policy["apex"].pop("apexlang_policy")
+        policy["apex"]["require_readable_yaml"] = True
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+        completed = run_manager(
+            "doctor",
+            "--project-root",
+            str(self.project),
+            "--apex-version",
+            "26.1",
+            expected_returncode=1,
+        )
+        self.assertIn("BLOCKER readable_yaml_would_generate_apexlang", completed.stdout)
+        self.assertIn("ADVISORY export_policy_v2_migration_required", completed.stdout)
 
     def test_doctor_reports_invalid_project_owned_export_policy(self) -> None:
         run_manager(
@@ -552,8 +615,10 @@ class ProjectInstallationTests(unittest.TestCase):
         )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         new_helpers = {
+            "Util/scripts/apex_version.py",
             "Util/scripts/check_oracle_apex_pending.py",
             "Util/scripts/manage_oracle_apex_export_retention.py",
+            "Util/scripts/validate_oracle_apex_compatibility.py",
             "Util/scripts/validate_oracle_apex_export.py",
             "Util/scripts/validate_oracle_apex_release_bundle.py",
         }

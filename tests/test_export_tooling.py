@@ -67,6 +67,43 @@ class ExportToolingTests(unittest.TestCase):
         )
         return pending
 
+    def write_apex_export(
+        self,
+        *,
+        app_id: int = 100,
+        include_readable: bool,
+        quoted_scn: bool = False,
+    ) -> Path:
+        root = self.project / f"apex/app_{app_id}"
+        (root / "application/pages").mkdir(parents=True)
+        if include_readable:
+            (root / "readable/application/pages").mkdir(parents=True)
+        scn = "'1'" if quoted_scn else "1"
+        (root / "install.sql").write_text(
+            "@application/create_application.sql\n", encoding="utf-8"
+        )
+        (root / "application/create_application.sql").write_text(
+            "begin\nwwv_flow_imp.create_flow("
+            f"p_default_application_id=>{app_id},p_version_scn=>{scn});\n"
+            "end;\n/\n",
+            encoding="utf-8",
+        )
+        (root / "application/pages/page_00001.sql").write_text(
+            "begin null; end;\n/\n", encoding="utf-8"
+        )
+        if include_readable:
+            (root / "readable/application/pages/p00001.yaml").write_text(
+                "id: 1\n", encoding="utf-8"
+            )
+        (root / f"f{app_id}.sql").write_text(
+            "begin\nwwv_flow_imp.create_flow("
+            f"p_default_application_id=>{app_id},"
+            "p_flow_status=>'AVAILABLE_W_EDIT_LINK',"
+            f"p_version_scn=>{scn});\nend;\n/\n",
+            encoding="utf-8",
+        )
+        return root
+
     def test_pending_contract_accepts_two_clean_files(self) -> None:
         self.initialize_pending()
         completed = run_script(
@@ -196,37 +233,143 @@ class ExportToolingTests(unittest.TestCase):
         self.assertNotIn("begin\n    PK_DDL_SNAPSHOT", completed.stdout)
         self.assertIn("EMIT_DB_SNAPSHOT_PURGE", completed.stdout)
 
-    def test_apex_validator_checks_three_atomic_formats(self) -> None:
-        root = self.project / "apex/app_100"
-        (root / "application/pages").mkdir(parents=True)
-        (root / "readable/application/pages").mkdir(parents=True)
-        (root / "install.sql").write_text("@application/create_application.sql\n", encoding="utf-8")
-        (root / "application/create_application.sql").write_text(
-            "begin\nwwv_flow_imp.create_flow(p_default_application_id=>100,p_version_scn=>1);\nend;\n/\n",
-            encoding="utf-8",
-        )
-        (root / "application/pages/page_00001.sql").write_text(
-            "begin null; end;\n/\n", encoding="utf-8"
-        )
-        (root / "readable/application/pages/p00001.yaml").write_text(
-            "id: 1\n", encoding="utf-8"
-        )
-        (root / "f100.sql").write_text(
-            "begin\nwwv_flow_imp.create_flow("
-            "p_default_application_id=>100,"
-            "p_flow_status=>'AVAILABLE_W_EDIT_LINK',"
-            "p_version_scn=>1);\nend;\n/\n",
-            encoding="utf-8",
-        )
-
+    def test_apex_validator_checks_pre_26_1_atomic_formats(self) -> None:
+        root = self.write_apex_export(include_readable=True)
         completed = run_script(
             "scripts/validate_apex_export.py",
             "--root",
             str(root),
             "--app-id",
             "100",
+            "--apex-version",
+            "24.2",
         )
-        self.assertIn("APEX_EXPORT OK atomic_formats=split,readable,monolithic", completed.stdout)
+        self.assertIn(
+            "APEX_EXPORT OK atomic_formats=split-sql,readable-yaml,monolithic-sql",
+            completed.stdout,
+        )
+
+    def test_apex_validator_checks_26_1_sql_formats_and_quoted_scn(self) -> None:
+        root = self.write_apex_export(
+            include_readable=False,
+            quoted_scn=True,
+        )
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "26.1.3",
+        )
+        self.assertIn(
+            "APEX_COMPATIBILITY OK version=26.1.3 status=SUPPORTED_26_1_PLUS",
+            completed.stdout,
+        )
+        self.assertIn("APEX_PAGES OK split=1 readable=NOT_REQUIRED", completed.stdout)
+        self.assertIn(
+            "APEX_EXPORT OK atomic_formats=split-sql,monolithic-sql",
+            completed.stdout,
+        )
+
+    def test_apex_validator_rejects_readable_yaml_on_26_1(self) -> None:
+        root = self.write_apex_export(include_readable=True)
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "26.1",
+            expected_returncode=2,
+        )
+        self.assertIn("readable/ is forbidden on APEX 26.1+", completed.stderr)
+
+    def test_apex_validator_rejects_apexlang_artifacts_on_every_version(self) -> None:
+        root = self.write_apex_export(include_readable=False)
+        (root / "application.apx").write_text("not accepted\n", encoding="utf-8")
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "26.1",
+            expected_returncode=2,
+        )
+        self.assertIn("APEXlang artifacts are disabled", completed.stderr)
+
+    def test_apex_validator_rejects_versions_below_24_2(self) -> None:
+        root = self.write_apex_export(include_readable=True)
+        completed = run_script(
+            "scripts/validate_apex_export.py",
+            "--root",
+            str(root),
+            "--app-id",
+            "100",
+            "--apex-version",
+            "23.2",
+            expected_returncode=2,
+        )
+        self.assertIn("below the supported minimum 24.2", completed.stderr)
+
+    def test_compatibility_validator_enforces_feature_boundaries(self) -> None:
+        unsupported = run_script(
+            "scripts/validate_apex_compatibility.py",
+            "--apex-version",
+            "23.2",
+            "--json",
+            expected_returncode=2,
+        )
+        self.assertIn("below 24.2", unsupported.stderr)
+        unsupported_report = json.loads(unsupported.stdout)
+        self.assertFalse(unsupported_report["supported"])
+        self.assertTrue(
+            unsupported_report["capabilities"]["dynamic_content_return_clob"]
+        )
+
+        legacy = run_script(
+            "scripts/validate_apex_compatibility.py",
+            "--apex-version",
+            "24.2",
+            "--require",
+            "readable-yaml-export",
+        )
+        self.assertIn("REQUIREMENT readable-yaml-export AVAILABLE", legacy.stdout)
+
+        gated = run_script(
+            "scripts/validate_apex_compatibility.py",
+            "--apex-version",
+            "24.2",
+            "--require",
+            "apex-26.1-public-apis",
+            expected_returncode=2,
+        )
+        self.assertIn("REQUIREMENT apex-26.1-public-apis BLOCKED", gated.stdout)
+
+        current = run_script(
+            "scripts/validate_apex_compatibility.py",
+            "--apex-version",
+            "26.1.3",
+            "--require",
+            "apex-26.1-public-apis",
+        )
+        self.assertIn("REQUIREMENT apex-26.1-public-apis AVAILABLE", current.stdout)
+        self.assertIn("OFFICIAL_EXPORT_FORMATS split-sql,monolithic-sql", current.stdout)
+
+        apexlang = run_script(
+            "scripts/validate_apex_compatibility.py",
+            "--apex-version",
+            "26.1.3",
+            "--require",
+            "apexlang",
+            expected_returncode=2,
+        )
+        self.assertIn("REQUIREMENT apexlang BLOCKED", apexlang.stdout)
+        self.assertIn("APEXlang operations are disabled", apexlang.stderr)
 
 
 if __name__ == "__main__":

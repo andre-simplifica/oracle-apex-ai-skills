@@ -1,20 +1,21 @@
 ---
 name: oracle-apex-export
-description: "Use for Oracle APEX 24.2 export and database source publication: temporary read-only inspection, complete application snapshots, full or partial five-file database releases, coordinated exports, retention, and pending DDL/DML packaging."
+description: "Use for version-gated Oracle APEX 24.2+ standard SQL export and database source publication: temporary inspection, complete application snapshots, five-file database releases, coordinated exports, retention, and pending DDL/DML packaging. APEXlang workflows are excluded."
 ---
 
 # Oracle APEX Export
 
-Export Oracle APEX 24.2 applications and application-schema database source with an explicit publication intent.
+Export supported Oracle APEX applications from 24.2 onward and application-schema database source with an explicit publication intent.
 
 ## Before Exporting
 
 1. Read repository instructions and `.oracle-apex-ai/project-profile.md`.
 2. Read `.oracle-apex-ai/export-policy.json` when present.
 3. Confirm the configured SQLcl connection by checking the expected `USER` and `SERVICE_NAME`, then confirm app ID, workspace, schema owner, and destination paths.
-4. Inspect current Git status and existing versioned artifacts.
-5. Determine the mode from [export-modes.md](references/export-modes.md).
-6. Confirm whether official repository publication was explicitly requested.
+4. Confirm the live APEX version and run `validate_oracle_apex_compatibility.py`; stop below 24.2.
+5. Inspect current Git status and existing versioned artifacts.
+6. Determine the mode from [export-modes.md](references/export-modes.md).
+7. Confirm whether official repository publication was explicitly requested.
 
 Do not infer official export authorization from a development, diagnosis, compile, or test request.
 
@@ -35,12 +36,13 @@ For official APEX exports:
 - use the app ID and export options from the project profile;
 - export to a candidate directory first;
 - prefer a split source tree containing `install.sql` and `application/`;
-- include `readable/` when the project requires readable YAML;
+- include `readable/` only on supported APEX releases before 26.1;
+- on APEX 26.1 or later, do not request `READABLE_YAML`, because Oracle produces APEXlang instead;
 - include a monolithic `f<APP_ID>.sql` when the project requires it;
 - do not assume a split export also creates the monolithic file; run the
   project-approved non-split application export when both forms are required;
-- treat split SQL, readable YAML, and the monolithic file as one atomic
-  application snapshot when the profile requires all three;
+- treat split SQL, the version-allowed readable YAML, and the monolithic file as one atomic application snapshot;
+- reject `.apx`, APEXlang directories, and APEXlang generate/export/validate/import commands in every version;
 - make the Supporting Objects decision explicit;
 - validate candidate structure and content before replacing the official snapshot;
 - compare the diff to the requested application and scope;
@@ -48,10 +50,7 @@ For official APEX exports:
 
 Use the project's canonical export script when one exists. Do not replace it with a generic command merely because SQLcl can export the application.
 
-Validate a generated candidate with `validate_oracle_apex_export.py` when the
-managed helper is installed. Reconcile the application identity, split and
-readable page inventories, monolithic source, editable build status, component
-version evidence, Supporting Objects policy, and secret scan.
+Validate a generated candidate with `validate_oracle_apex_export.py --apex-version <confirmed-version>` when the managed helper is installed. Reconcile application identity, version-allowed page inventories, monolithic source, editable build status, component version evidence, Supporting Objects policy, absence of APEXlang, and the secret scan.
 
 ## Coordinated and Parallel Exports
 
@@ -91,7 +90,7 @@ Before publication:
 
 - candidate export exists and is non-empty;
 - expected app ID appears in metadata;
-- required split/readable/monolithic structures exist;
+- required version-gated SQL/readable structures exist and no APEXlang artifact exists;
 - database object list matches baseline or release mode;
 - full and partial database bundles use the same five scoped files, with an explicit base snapshot for partial mode;
 - every database artifact in a coordinated snapshot uses the same confirmed

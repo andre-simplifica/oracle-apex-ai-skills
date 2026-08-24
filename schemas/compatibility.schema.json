@@ -14,7 +14,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "kit": {
       "const": "oracle-apex-ai-skills"
@@ -27,12 +27,16 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "target",
+        "minimum_supported",
         "verified",
+        "feature_gates",
+        "apexlang_policy",
+        "official_export_before_26_1",
+        "official_export_from_26_1",
         "other_versions"
       ],
       "properties": {
-        "target": {
+        "minimum_supported": {
           "const": "24.2"
         },
         "verified": {
@@ -42,6 +46,29 @@
           },
           "minItems": 1,
           "uniqueItems": true
+        },
+        "feature_gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dynamic_content_return_clob",
+            "apex_26_1_public_apis",
+            "apexlang_product"
+          ],
+          "properties": {
+            "dynamic_content_return_clob": {"const": "22.2"},
+            "apex_26_1_public_apis": {"const": "26.1"},
+            "apexlang_product": {"const": "26.1"}
+          }
+        },
+        "apexlang_policy": {
+          "const": "disabled"
+        },
+        "official_export_before_26_1": {
+          "const": ["split-sql", "readable-yaml", "monolithic-sql"]
+        },
+        "official_export_from_26_1": {
+          "const": ["split-sql", "monolithic-sql"]
         },
         "other_versions": {
           "type": "string",

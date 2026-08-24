@@ -1,11 +1,11 @@
 ---
 name: oracle-apex-dev
-description: Use for Oracle APEX 24.2 development requests involving Page Designer, SQLcl, Object Browser, SQL/PLSQL, REST integrations, background jobs, regions, reports, Dynamic Actions, contextual help, runtime validation, temporary read-only exports, security guardrails, destructive-operation review, and local standards defined by the project profile.
+description: Use for version-gated Oracle APEX 24.2+ development involving Page Designer, SQLcl, Object Browser, SQL/PLSQL, REST integrations, jobs, regions, reports, Dynamic Actions, contextual help, runtime validation, internal APIs, security guardrails, and local project standards.
 ---
 
 # Oracle APEX DEV
 
-Generic skill for working with Oracle APEX 24.2 in a pragmatic, traceable, and low-risk way.
+Generic skill for working with supported Oracle APEX releases from 24.2 onward in a pragmatic, traceable, and low-risk way.
 
 ## Layers
 
@@ -24,7 +24,8 @@ Do not put conventions from one specific application into this skill core.
 3. When the request involves a new screen, visual flow, or UI pattern, read `.oracle-apex-ai/app-patterns.md` and the referenced example pages.
 4. Confirm environment, app id, workspace, schema, and the configured SQLcl connection before technical execution. Before query, compile, import, or export, verify both `USER` and `SERVICE_NAME`; do not continue on a plausible-but-unconfirmed connection.
 5. Inspect `.oracle-apex-ai/installation-manifest.json` and the object-lock section of the project profile.
-6. If essential context is missing, state the limitation and ask or perform read-only inspection.
+6. Confirm the live APEX version and run the managed compatibility validator before using any version-specific API or export behavior.
+7. If essential context is missing, state the limitation and ask or perform read-only inspection.
 
 ## Essential Rules
 
@@ -60,6 +61,8 @@ Do not put conventions from one specific application into this skill core.
 - **Security and permissions**: follow [security-and-permissions.md](references/security-and-permissions.md) for authentication, authorization, credentials, public pages, ORDS/REST privileges, grants, ACLs, and sensitive data.
 - **Object Browser**: follow [object-browser.md](references/object-browser.md).
 - **Internal APEX APIs**: follow [apex-internal-apis.md](references/apex-internal-apis.md) when the change is repeatable, multi-page, or safer through a controlled script.
+- **Version gates**: follow [apex-version-compatibility.md](references/apex-version-compatibility.md) before version-specific work.
+- **APEX 26.1 public APIs**: only after the `>= 26.1` gate, read [apex-26-1-public-apis.md](references/apex-26-1-public-apis.md).
 - **Runtime**: follow [runtime-validation.md](references/runtime-validation.md).
 - **Help and user text**: follow [help-and-ux.md](references/help-and-ux.md), then apply the local project profile.
 - **Shared DEV objects**: route to `oracle-apex-object-lock` before editing, compiling, replacing, or testing a supported object.

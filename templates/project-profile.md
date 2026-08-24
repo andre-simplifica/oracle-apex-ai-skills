@@ -1,4 +1,4 @@
-<!-- oracle-apex-ai-project-profile-version: 2 -->
+<!-- oracle-apex-ai-project-profile-version: 3 -->
 # APEX Project Profile
 
 Copy this file to:
@@ -24,6 +24,10 @@ Fill it with the real standards of your application.
 - Workspace:
 - Schema owner:
 - APEX version:
+- Confirmed live APEX version command/query:
+- APEX compatibility validator command:
+- APEX 26.1 public APIs allowed only after version gate: yes
+- APEXlang operations: disabled
 - Database/environment:
 - SQLcl command/saved connection:
 - Expected SQLcl `USER`:
@@ -82,7 +86,9 @@ For packages, one `PACKAGE` lock covers both specification and body. The runtime
 - Official APEX snapshot path:
 - APEX export script/command:
 - Require split export (`install.sql` + `application/`): yes/no
-- Require readable YAML: yes/no
+- Require readable YAML before APEX 26.1: yes/no
+- Omit readable YAML on APEX 26.1 or later: yes
+- APEXlang generate/export/validate/import: disabled
 - Require monolithic `f<APP_ID>.sql`: yes/no
 - Supporting Objects policy:
 - Treat required APEX formats as one atomic snapshot: yes/no

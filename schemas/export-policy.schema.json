@@ -6,23 +6,25 @@
   "additionalProperties": false,
   "required": ["schema_version", "apex", "database_release", "pending", "retention"],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"const": 2},
     "apex": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "official_export_scope",
         "require_split_sql",
-        "require_readable_yaml",
+        "readable_yaml_mode",
+        "apexlang_policy",
         "require_monolithic_sql",
         "require_editable_build_status",
         "supporting_objects"
       ],
       "properties": {
         "official_export_scope": {"const": "complete-application"},
-        "require_split_sql": {"type": "boolean"},
-        "require_readable_yaml": {"type": "boolean"},
-        "require_monolithic_sql": {"type": "boolean"},
+        "require_split_sql": {"const": true},
+        "readable_yaml_mode": {"const": "before-26.1"},
+        "apexlang_policy": {"const": "disabled"},
+        "require_monolithic_sql": {"const": true},
         "require_editable_build_status": {"type": "boolean"},
         "supporting_objects": {"enum": ["include", "exclude", "project-defined"]}
       }

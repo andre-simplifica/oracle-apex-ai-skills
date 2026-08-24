@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "apex": {
     "official_export_scope": "complete-application",
     "require_split_sql": true,
-    "require_readable_yaml": true,
+    "readable_yaml_mode": "before-26.1",
+    "apexlang_policy": "disabled",
     "require_monolithic_sql": true,
     "require_editable_build_status": true,
     "supporting_objects": "project-defined"

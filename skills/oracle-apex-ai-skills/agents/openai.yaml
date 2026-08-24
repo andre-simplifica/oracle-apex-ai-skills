@@ -1,6 +1,6 @@
 interface:
   display_name: "Oracle APEX AI Skills"
-  short_description: "Install, update, and route the Oracle APEX 24.2 project kit"
+  short_description: "Install, update, and route the Oracle APEX 24.2+ project kit"
   default_prompt: "Use $oracle-apex-ai-skills to follow this project's preserved APEX standards and route development, locks, exports, or updates safely."
 
 policy:

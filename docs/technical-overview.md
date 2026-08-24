@@ -2,14 +2,15 @@
 
 ## Compatibility
 
-The verified target is **Oracle APEX 24.2** with modern SQLcl and Oracle Database/Autonomous Database.
+The supported baseline is **Oracle APEX 24.2** with deterministic gates for APEX 26.1 and later.
 
 | Version | Status |
 | --- | --- |
-| APEX 24.2 | Verified design target |
-| Other APEX versions | Validate API signatures, export options, metadata, and runtime behavior before use |
+| Below APEX 24.2 | Unsupported |
+| APEX 24.2 through releases before 26.1 | Supported legacy readable-YAML export contract |
+| APEX 26.1 or later | Supported 26.1 API catalog; standard SQL-only application export contract |
 
-The consuming project receives `.oracle-apex-ai/compatibility.json`, which records kit version `1.1.0`, the required cooperative object-lock runtime, and optional external companion repositories.
+The consuming project receives `.oracle-apex-ai/compatibility.json`, which records kit version `1.2.0`, the 24.2 minimum, the 26.1 feature gate, the disabled APEXlang policy, the required cooperative object-lock runtime, and optional external companion repositories.
 
 ## Responsibilities
 
@@ -19,7 +20,7 @@ The consuming project receives `.oracle-apex-ai/compatibility.json`, which recor
 - `oracle-apex-export`: temporary inspection, version-1 baseline, official snapshots, and releases.
 - `templates/`: project-owned profile/pattern/export-policy/pending scaffolding and managed compatibility.
 - `scripts/manage_project_installation.py`: deterministic repository-scoped installer/updater.
-- managed validators: APEX export, five-file database bundle, pending contract, and export retention.
+- managed validators: APEX version/capabilities, version-gated APEX export, five-file database bundle, pending contract, and export retention.
 
 ## Installation Model
 
@@ -41,7 +42,7 @@ The manifest records:
 - SHA-256 of every managed file;
 - project-owned paths that must be preserved.
 
-`status` verifies local integrity. `doctor` also reports project-owned profile/pattern/export readiness. `check` compares a new source. `install` and `update` support `--dry-run`. Update stops on managed-file drift and uses temporary backups plus atomic file replacement for rollback on failure. `--initialize-missing-project-files` creates only newly introduced missing templates and never replaces custom project files.
+`status` verifies local integrity. `doctor` also reports project-owned profile/pattern/export readiness and accepts `--apex-version` for live version-policy checks. The standalone compatibility validator blocks unsupported releases and unavailable features. `check` compares a new source. `install` and `update` support `--dry-run`. Update stops on managed-file drift and uses temporary backups plus atomic file replacement for rollback on failure. `--initialize-missing-project-files` creates only newly introduced missing templates and never replaces custom project files.
 
 The script does not fetch the network itself. The agent or developer obtains and validates a Git source first, which keeps authentication and ref selection visible.
 
@@ -83,7 +84,7 @@ It remains cooperative: it does not install a schema DDL trigger. Legacy force p
 
 ## Export Model
 
-An initial baseline is full structural source. An explicit release always contains a complete, atomic APEX split SQL/readable YAML/monolithic snapshot plus either a `full` or `partial` database bundle.
+An initial baseline is full structural source. Before APEX 26.1, an explicit release contains a complete atomic split-SQL/readable-YAML/monolithic-SQL application snapshot. From APEX 26.1 onward, it contains split SQL and monolithic SQL only. APEXlang is rejected in every release and is outside this repository.
 
 Baseline structural source includes tables, constraints, non-constraint indexes, sequences, types, views/materialized views, packages, standalone routines, triggers, synonyms, and explicit grants required by the app.
 

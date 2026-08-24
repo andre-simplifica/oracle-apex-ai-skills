@@ -1,7 +1,7 @@
 interface:
   display_name: "Oracle APEX Export"
   short_description: "Validate complete APEX and full/partial database releases"
-  default_prompt: "Use $oracle-apex-export to generate only the explicitly requested APEX 24.2 baseline, complete snapshot, or full/partial five-file release with pending and retention guardrails."
+  default_prompt: "Use $oracle-apex-export to generate only the explicitly requested version-gated standard SQL APEX 24.2+ baseline, complete snapshot, or database release; keep APEXlang disabled."
 
 policy:
   allow_implicit_invocation: true

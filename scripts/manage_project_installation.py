@@ -18,10 +18,12 @@ from typing import Optional, Union
 from urllib.parse import urlsplit, urlunsplit
 import uuid
 
+from apex_version import ApexVersionError, evaluate_apex_version
+
 
 KIT_NAME = "oracle-apex-ai-skills"
 MANIFEST_SCHEMA_VERSION = 1
-PROJECT_PROFILE_VERSION = 2
+PROJECT_PROFILE_VERSION = 3
 CORE_SKILLS = (
     "oracle-apex-ai-skills",
     "oracle-apex-dev",
@@ -36,12 +38,18 @@ PROJECT_MANAGER_PATH = Path("Util/scripts/manage_oracle_apex_ai_skills.py")
 PENDING_CHECKER_PATH = Path("Util/scripts/check_oracle_apex_pending.py")
 RETENTION_MANAGER_PATH = Path("Util/scripts/manage_oracle_apex_export_retention.py")
 APEX_EXPORT_VALIDATOR_PATH = Path("Util/scripts/validate_oracle_apex_export.py")
+APEX_VERSION_MODULE_PATH = Path("Util/scripts/apex_version.py")
+APEX_COMPATIBILITY_VALIDATOR_PATH = Path(
+    "Util/scripts/validate_oracle_apex_compatibility.py"
+)
 RELEASE_VALIDATOR_PATH = Path("Util/scripts/validate_oracle_apex_release_bundle.py")
 PROJECT_TOOL_PATHS = (
     PROJECT_MANAGER_PATH,
     PENDING_CHECKER_PATH,
     RETENTION_MANAGER_PATH,
     APEX_EXPORT_VALIDATOR_PATH,
+    APEX_VERSION_MODULE_PATH,
+    APEX_COMPATIBILITY_VALIDATOR_PATH,
     RELEASE_VALIDATOR_PATH,
 )
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
@@ -110,6 +118,8 @@ def validate_source(source_root: Path) -> None:
         Path("scripts/manage_project_installation.py"),
         Path("scripts/check_pending_migrations.py"),
         Path("scripts/manage_export_retention.py"),
+        Path("scripts/apex_version.py"),
+        Path("scripts/validate_apex_compatibility.py"),
         Path("scripts/validate_apex_export.py"),
         Path("scripts/validate_release_bundle.py"),
         Path("templates/compatibility.json"),
@@ -135,7 +145,7 @@ def validate_source(source_root: Path) -> None:
     kit_version = (source_root / "VERSION").read_text(encoding="utf-8").strip()
     if compatibility.get("kit") != KIT_NAME:
         raise InstallationError("Source compatibility record has an unexpected kit name")
-    if compatibility.get("schema_version") != 1:
+    if compatibility.get("schema_version") != 2:
         raise InstallationError("Unsupported source compatibility schema")
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", kit_version):
         raise InstallationError("Source VERSION is not semantic version X.Y.Z")
@@ -157,6 +167,10 @@ def source_file_map(source_root: Path) -> dict[str, Path]:
         PROJECT_MANAGER_PATH: Path("scripts/manage_project_installation.py"),
         PENDING_CHECKER_PATH: Path("scripts/check_pending_migrations.py"),
         RETENTION_MANAGER_PATH: Path("scripts/manage_export_retention.py"),
+        APEX_VERSION_MODULE_PATH: Path("scripts/apex_version.py"),
+        APEX_COMPATIBILITY_VALIDATOR_PATH: Path(
+            "scripts/validate_apex_compatibility.py"
+        ),
         APEX_EXPORT_VALIDATOR_PATH: Path("scripts/validate_apex_export.py"),
         RELEASE_VALIDATOR_PATH: Path("scripts/validate_release_bundle.py"),
     }
@@ -708,7 +722,17 @@ def apply_plan(
                 "source": source_metadata,
                 "compatibility": {
                     "kit_version": compatibility["kit_version"],
-                    "apex_target": compatibility["apex"]["target"],
+                    "apex_target": compatibility["apex"]["minimum_supported"],
+                    "apex_minimum_supported": compatibility["apex"][
+                        "minimum_supported"
+                    ],
+                    "dynamic_content_from": compatibility["apex"][
+                        "feature_gates"
+                    ]["dynamic_content_return_clob"],
+                    "apex_26_1_features_from": compatibility["apex"][
+                        "feature_gates"
+                    ]["apex_26_1_public_apis"],
+                    "apexlang_policy": compatibility["apex"]["apexlang_policy"],
                     "object_lock_runtime_required": compatibility["database"][
                         "object_lock_runtime_required"
                     ],
@@ -772,14 +796,38 @@ def command_status(args: argparse.Namespace) -> int:
         source = manifest.get("source", {})
         compatibility = manifest.get("compatibility", {})
         print(f"KIT_VERSION {compatibility.get('kit_version', 'UNKNOWN')}")
+        print(
+            "APEX_MINIMUM_SUPPORTED "
+            + str(
+                compatibility.get(
+                    "apex_minimum_supported",
+                    compatibility.get("apex_target", "UNKNOWN"),
+                )
+            )
+        )
+        print(
+            "DYNAMIC_CONTENT_FROM "
+            + str(compatibility.get("dynamic_content_from", "22.2"))
+        )
+        print(
+            "APEX_26_1_FEATURES_FROM "
+            + str(compatibility.get("apex_26_1_features_from", "26.1"))
+        )
+        print(
+            "APEXLANG_POLICY "
+            + str(compatibility.get("apexlang_policy", "UNKNOWN")).upper()
+        )
         print(f"SOURCE_REPOSITORY {source.get('repository', 'UNKNOWN')}")
         print(f"SOURCE_REF {source.get('requested_ref', 'UNKNOWN')}")
         print(f"SOURCE_COMMIT {source.get('resolved_commit', 'UNKNOWN')}")
     return 0 if inspection["status"] == "HEALTHY" else 1
 
 
-def doctor_export_policy(project_root: Path, policy: dict) -> tuple[Path, Path]:
-    if policy.get("schema_version") != 1:
+def doctor_export_policy(
+    project_root: Path, policy: dict
+) -> tuple[Path, Path, dict]:
+    schema_version = policy.get("schema_version")
+    if schema_version not in {1, 2}:
         raise InstallationError("Unsupported export policy schema")
     apex = policy.get("apex")
     release = policy.get("database_release")
@@ -789,6 +837,41 @@ def doctor_export_policy(project_root: Path, policy: dict) -> tuple[Path, Path]:
         raise InstallationError("Export policy sections are incomplete")
     if apex.get("official_export_scope") != "complete-application":
         raise InstallationError("Official APEX export scope must be complete-application")
+    if apex.get("require_split_sql") is not True:
+        raise InstallationError("Official APEX exports must require split SQL")
+    if apex.get("require_monolithic_sql") is not True:
+        raise InstallationError("Official APEX exports must require monolithic SQL")
+    if not isinstance(apex.get("require_editable_build_status"), bool):
+        raise InstallationError("Editable APEX build-status policy is invalid")
+    if apex.get("supporting_objects") not in {
+        "include",
+        "exclude",
+        "project-defined",
+    }:
+        raise InstallationError("Supporting Objects policy is invalid")
+
+    if schema_version == 1:
+        if not isinstance(apex.get("require_readable_yaml"), bool):
+            raise InstallationError("Readable YAML policy is invalid")
+        apex_contract = {
+            "schema_version": 1,
+            "readable_yaml_mode": (
+                "always" if apex["require_readable_yaml"] else "disabled"
+            ),
+            "apexlang_policy": "unspecified",
+        }
+    else:
+        if apex.get("readable_yaml_mode") != "before-26.1":
+            raise InstallationError(
+                "Readable YAML must be limited to supported releases before 26.1"
+            )
+        if apex.get("apexlang_policy") != "disabled":
+            raise InstallationError("APEXlang must be disabled by project policy")
+        apex_contract = {
+            "schema_version": 2,
+            "readable_yaml_mode": "before-26.1",
+            "apexlang_policy": "disabled",
+        }
     if release.get("default_scope") not in {"full", "partial"}:
         raise InstallationError("Database release default scope is invalid")
     if release.get("five_file_groups") != [
@@ -854,6 +937,7 @@ def doctor_export_policy(project_root: Path, policy: dict) -> tuple[Path, Path]:
     return (
         safe_project_path(project_root, Path(directory) / ddl_file),
         safe_project_path(project_root, Path(directory) / dml_file),
+        apex_contract,
     )
 
 
@@ -870,6 +954,8 @@ def command_doctor(args: argparse.Namespace) -> int:
     compatibility = manifest.get("compatibility", {})
     print(f"KIT_VERSION {compatibility.get('kit_version', 'UNKNOWN')}")
     advisories: list[str] = []
+    blockers: list[str] = []
+    policy_contract: Optional[dict] = None
 
     profile = safe_project_path(project_root, ".oracle-apex-ai/project-profile.md")
     if not profile.is_file():
@@ -902,22 +988,67 @@ def command_doctor(args: argparse.Namespace) -> int:
     else:
         try:
             policy = read_json(policy_path)
-            ddl, dml = doctor_export_policy(project_root, policy)
+            ddl, dml, policy_contract = doctor_export_policy(project_root, policy)
             if not ddl.is_file() or not dml.is_file():
                 advisories.append("configured_pending_files_missing")
             else:
                 print(f"PENDING_DDL {ddl.relative_to(project_root)}")
                 print(f"PENDING_DML {dml.relative_to(project_root)}")
-            print("EXPORT_POLICY VALID")
+            print(
+                "EXPORT_POLICY VALID "
+                f"schema={policy_contract['schema_version']} "
+                f"readable_yaml={policy_contract['readable_yaml_mode']} "
+                f"apexlang={policy_contract['apexlang_policy']}"
+            )
+            if policy_contract["schema_version"] == 1:
+                advisories.append("export_policy_v2_migration_required")
         except (KeyError, TypeError, InstallationError, OSError, UnicodeError):
             advisories.append("export_policy_invalid")
 
+    if args.apex_version:
+        try:
+            apex_report = evaluate_apex_version(args.apex_version)
+            print(f"APEX_VERSION {apex_report['apex_version']}")
+            print(f"APEX_SUPPORT {apex_report['support_status']}")
+            print(
+                "APEX_26_1_PUBLIC_APIS "
+                + (
+                    "AVAILABLE"
+                    if apex_report["capabilities"]["apex_26_1_public_apis"]
+                    else "UNAVAILABLE"
+                )
+            )
+            print(
+                "APEXLANG_PRODUCT "
+                + (
+                    "AVAILABLE"
+                    if apex_report["capabilities"]["apexlang_product"]
+                    else "UNAVAILABLE"
+                )
+            )
+            print("APEXLANG_SKILL_POLICY DISABLED")
+            if not apex_report["supported"]:
+                blockers.append("apex_version_below_24_2")
+            elif (
+                policy_contract is not None
+                and apex_report["capabilities"]["apex_26_1_public_apis"]
+                and policy_contract["readable_yaml_mode"] == "always"
+            ):
+                blockers.append("readable_yaml_would_generate_apexlang")
+        except ApexVersionError:
+            blockers.append("apex_version_invalid")
+    else:
+        print("APEX_VERSION NOT_PROVIDED")
+
     print("COMPANIONS EXTERNAL build-apex-brand-reports oracle-apex-echarts")
+    for blocker in blockers:
+        print(f"BLOCKER {blocker}")
     for advisory in advisories:
         print(f"ADVISORY {advisory}")
-    print(
-        f"DOCTOR {'READY' if not advisories else 'ADVISORY'} count={len(advisories)}"
-    )
+    if blockers:
+        print(f"DOCTOR BLOCKED count={len(blockers)} advisories={len(advisories)}")
+        return 1
+    print(f"DOCTOR {'READY' if not advisories else 'ADVISORY'} count={len(advisories)}")
     return 0
 
 
@@ -1047,6 +1178,13 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor", help="Inspect managed integrity and project-owned contract readiness."
     )
     doctor.add_argument("--project-root", type=Path, default=Path.cwd())
+    doctor.add_argument(
+        "--apex-version",
+        help=(
+            "Confirmed live APEX version used to enforce the 24.2 minimum, "
+            "26.1 API gate, and version-specific export policy."
+        ),
+    )
     doctor.set_defaults(handler=command_doctor)
 
     check = subparsers.add_parser(

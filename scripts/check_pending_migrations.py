@@ -62,7 +62,7 @@ def strip_comments_and_literals(sql: str) -> str:
 
 
 def validate_policy(policy: dict) -> dict:
-    if policy.get("schema_version") != 1:
+    if policy.get("schema_version") not in {1, 2}:
         raise ContractError("Unsupported export-policy schema_version")
     pending = policy.get("pending")
     if not isinstance(pending, dict):
