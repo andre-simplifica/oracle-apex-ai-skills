@@ -6,6 +6,9 @@ This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 
 ## Unreleased
 
+- Fixed object-lock package compilation by evaluating private byte-truncation helpers in PL/SQL before SQL DML.
+- Accepted Oracle's UTC expression for the expiry timestamp index in both runtime audit and strict installation validation. Runtime API version remains 1.1.0.
+
 ## 2026-08-24 - 1.2.2
 
 - Restored redaction-aware Bearer-token scanning so masked documentation examples remain valid while unredacted token-shaped values are still rejected.

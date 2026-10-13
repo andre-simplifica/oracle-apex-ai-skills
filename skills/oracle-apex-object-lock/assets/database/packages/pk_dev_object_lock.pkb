@@ -219,6 +219,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         l_branch_name      dev_object_lock.branch_name%type;
         l_task_ref         dev_object_lock.task_ref%type;
         l_lock_expires_at  dev_object_lock.lock_expires_at%type;
+        l_lock_context     dev_object_lock.lock_context%type;
     begin
         validar_entrada(l_nome, l_tipo, nvl(p_ttl_minutos, 240));
         validar_forca_desabilitada(p_forcar);
@@ -229,12 +230,14 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
                    locked_by,
                    branch_name,
                    task_ref,
-                   lock_expires_at
+                   lock_expires_at,
+                   lock_context
               into l_lock_id,
                    l_locked_by,
                    l_branch_name,
                    l_task_ref,
-                   l_lock_expires_at
+                   l_lock_expires_at,
+                   l_lock_context
               from dev_object_lock
              where object_owner = user
                and object_type = l_tipo
@@ -244,7 +247,10 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         exception
             when no_data_found then
                 l_lock_id := null;
+                l_lock_context := null;
         end;
+
+        l_lock_context := truncar_bytes(nvl(trim(p_context), l_lock_context), 4000);
 
         if l_lock_id is not null then
             if l_locked_by = l_ator then
@@ -253,7 +259,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
                        lock_expires_at = systimestamp + numtodsinterval(nvl(p_ttl_minutos, 240), 'MINUTE'),
                        branch_name = substr(nvl(trim(p_branch_name), branch_name), 1, 255),
                        task_ref = substr(nvl(trim(p_task_ref), task_ref), 1, 500),
-                       lock_context = truncar_bytes(nvl(trim(p_context), lock_context), 4000),
+                       lock_context = l_lock_context,
                        repo_base_ref = substr(nvl(trim(p_repo_base_ref), repo_base_ref), 1, 255),
                        repo_head_ref = substr(nvl(trim(p_repo_head_ref), repo_head_ref), 1, 255),
                        repo_start_sha = substr(nvl(trim(p_repo_start_sha), repo_start_sha), 1, 64)
@@ -294,7 +300,7 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
                 l_ator,
                 substr(trim(p_branch_name), 1, 255),
                 substr(trim(p_task_ref), 1, 500),
-                truncar_bytes(p_context, 4000),
+                l_lock_context,
                 substr(trim(p_repo_base_ref), 1, 255),
                 substr(trim(p_repo_head_ref), 1, 255),
                 substr(trim(p_repo_start_sha), 1, 64),
@@ -373,16 +379,18 @@ create or replace package body "PK_DEV_OBJECT_LOCK" as
         l_nome     dev_object_lock.object_name%type := normalizar_nome(p_object_name);
         l_ator     dev_object_lock.locked_by%type := ator_atual(p_lock_owner);
         l_qtd      number;
+        l_release_reason dev_object_lock.release_reason%type;
     begin
         validar_entrada(l_nome, l_tipo, null);
         validar_forca_desabilitada(p_forcar);
         expirar_locks_vencidos;
+        l_release_reason := truncar_bytes(nvl(trim(p_release_reason), 'Liberado pelo dono do lock.'), 4000);
 
         update dev_object_lock
            set lock_status = 'RELEASED',
                released_at = systimestamp,
                released_by = l_ator,
-               release_reason = truncar_bytes(nvl(trim(p_release_reason), 'Liberado pelo dono do lock.'), 4000),
+               release_reason = l_release_reason,
                repo_end_sha = substr(nvl(trim(p_repo_end_sha), repo_end_sha), 1, 64)
          where object_owner = user
            and object_type = l_tipo

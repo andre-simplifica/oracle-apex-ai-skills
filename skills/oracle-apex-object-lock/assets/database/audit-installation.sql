@@ -19,6 +19,7 @@ declare
     l_pk_columns       number := 0;
     l_index_contract   number := 0;
     l_index_columns    number := 0;
+    l_expiry_expression varchar2(4000);
     l_index_expressions number := 0;
     l_view_columns     number := 0;
     l_view_expected_columns number := 0;
@@ -167,6 +168,23 @@ begin
      where index_name = 'DEV_OBJECT_LOCK_I1'
        and ((column_position = 1 and column_name = 'LOCK_STATUS')
          or (column_position = 2 and column_name = 'LOCK_EXPIRES_AT'));
+
+    -- Oracle normalizes a TIMESTAMP WITH TIME ZONE index to UTC extraction.
+    if l_index_columns = 1 then
+        for expression_row in (
+            select column_expression
+              from user_ind_expressions
+             where index_name = 'DEV_OBJECT_LOCK_I1'
+               and column_position = 2
+        ) loop
+            l_expiry_expression := expression_row.column_expression;
+            if regexp_replace(upper(l_expiry_expression), '[[:space:]"]', '') =
+               'SYS_EXTRACT_UTC(LOCK_EXPIRES_AT)'
+            then
+                l_index_columns := l_index_columns + 1;
+            end if;
+        end loop;
+    end if;
 
     select count(*)
       into l_index_expressions

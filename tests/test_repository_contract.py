@@ -109,6 +109,23 @@ class RepositoryContractTests(unittest.TestCase):
                 f"Missing SQL include from install.sql: {included}",
             )
 
+    def test_private_plsql_truncation_is_not_called_from_sql(self) -> None:
+        body = (
+            REPO_ROOT / "skills/oracle-apex-object-lock/assets/database"
+            / "packages/pk_dev_object_lock.pkb"
+        ).read_text(encoding="utf-8")
+        # A private package helper cannot be resolved by the SQL engine.
+        for statement in re.finditer(
+            r"\b(?:select|insert|update|delete|merge)\b[^;]*;",
+            body,
+            re.IGNORECASE,
+        ):
+            self.assertNotRegex(
+                statement.group(0).lower(),
+                r"\btruncar_bytes\s*\(",
+                "Private PL/SQL helper used in SQL; compilation fails with PLS-00231.",
+            )
+
     def test_compatibility_record_matches_skills(self) -> None:
         compatibility = json.loads(
             (REPO_ROOT / "templates" / "compatibility.json").read_text(
