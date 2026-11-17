@@ -56,6 +56,7 @@ Inspect local modifications and the installed upstream commit, fetch or clone th
 - On APEX 24.2 through releases before 26.1, use the legacy SQL split + readable YAML + monolithic SQL export contract.
 - On APEX 26.1 or later, allow documented 26.1 public APIs only after the version gate, and use SQL split + monolithic SQL for official application exports.
 - APEXlang may exist in the installed Oracle product from 26.1 onward, but this kit must not generate, export, parse, edit, validate, compile, or import APEXlang. Route future APEXlang work to a separate project.
+- For APEX 26.2 projects using APEXlang as source, use the separate [APEXlang kit](https://github.com/andre-simplifica/oracle-apex-ai-skills-apexlang). Do not transplant its helpers or source contracts into this SQL-based kit.
 - Never invent application objects, paths, IDs, schemas, connections, or business rules.
 - Never overwrite project-owned files under `.oracle-apex-ai/`, except the generated manifest, upstream lock, and compatibility record managed by the installer.
 - Keep table/structural DDL and reviewed DML in the two configured pending files. Never put APEX components or standalone object source there.

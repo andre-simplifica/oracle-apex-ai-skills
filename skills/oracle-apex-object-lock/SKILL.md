@@ -32,6 +32,10 @@ The installer is idempotent: rerunning it preserves compatible existing data, cr
 
 After installation, run `audit-installation.sql` again. Record the status in the task closeout; never store a password or connection string in the project profile.
 
+For a separately authorized functional check, follow [concurrency-test.md](references/concurrency-test.md).
+The two-session harness requires an isolated disposable DEV runtime and defaults
+to a local plan without connecting.
+
 ## Lock Workflow
 
 Follow [workflow.md](references/workflow.md) for every supported object that will be changed in shared DEV:

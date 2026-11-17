@@ -85,6 +85,9 @@ Util/scripts/check_oracle_apex_pending.py
 Util/scripts/manage_oracle_apex_export_retention.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
+Util/scripts/profile_lint.py
+Util/scripts/target_preflight.py
+Util/scripts/object_lock_smoke.py
 ```
 
 Initialized when missing and then owned by the consuming project:

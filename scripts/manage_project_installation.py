@@ -19,11 +19,11 @@ from urllib.parse import urlsplit, urlunsplit
 import uuid
 
 from apex_version import ApexVersionError, evaluate_apex_version
+from profile_lint import PROJECT_PROFILE_VERSION, review_profile
 
 
 KIT_NAME = "oracle-apex-ai-skills"
 MANIFEST_SCHEMA_VERSION = 1
-PROJECT_PROFILE_VERSION = 3
 CORE_SKILLS = (
     "oracle-apex-ai-skills",
     "oracle-apex-dev",
@@ -43,6 +43,9 @@ APEX_COMPATIBILITY_VALIDATOR_PATH = Path(
     "Util/scripts/validate_oracle_apex_compatibility.py"
 )
 RELEASE_VALIDATOR_PATH = Path("Util/scripts/validate_oracle_apex_release_bundle.py")
+PROFILE_LINTER_PATH = Path("Util/scripts/profile_lint.py")
+TARGET_PREFLIGHT_PATH = Path("Util/scripts/target_preflight.py")
+LOCK_SMOKE_PATH = Path("Util/scripts/object_lock_smoke.py")
 PROJECT_TOOL_PATHS = (
     PROJECT_MANAGER_PATH,
     PENDING_CHECKER_PATH,
@@ -51,6 +54,9 @@ PROJECT_TOOL_PATHS = (
     APEX_VERSION_MODULE_PATH,
     APEX_COMPATIBILITY_VALIDATOR_PATH,
     RELEASE_VALIDATOR_PATH,
+    PROFILE_LINTER_PATH,
+    TARGET_PREFLIGHT_PATH,
+    LOCK_SMOKE_PATH,
 )
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 
@@ -122,6 +128,9 @@ def validate_source(source_root: Path) -> None:
         Path("scripts/validate_apex_compatibility.py"),
         Path("scripts/validate_apex_export.py"),
         Path("scripts/validate_release_bundle.py"),
+        Path("scripts/profile_lint.py"),
+        Path("scripts/target_preflight.py"),
+        Path("scripts/object_lock_smoke.py"),
         Path("templates/compatibility.json"),
         Path("templates/export-policy.json"),
         Path("templates/pending-ddl.sql"),
@@ -173,6 +182,9 @@ def source_file_map(source_root: Path) -> dict[str, Path]:
         ),
         APEX_EXPORT_VALIDATOR_PATH: Path("scripts/validate_apex_export.py"),
         RELEASE_VALIDATOR_PATH: Path("scripts/validate_release_bundle.py"),
+        PROFILE_LINTER_PATH: Path("scripts/profile_lint.py"),
+        TARGET_PREFLIGHT_PATH: Path("scripts/target_preflight.py"),
+        LOCK_SMOKE_PATH: Path("scripts/object_lock_smoke.py"),
     }
     for target, source in project_tools.items():
         mapping[target.as_posix()] = source_root / source
@@ -975,6 +987,11 @@ def command_doctor(args: argparse.Namespace) -> int:
                 f"EXPECTED {PROJECT_PROFILE_VERSION}"
             )
             advisories.append("project_profile_merge_required")
+        profile_notes = review_profile(content)
+        for note in profile_notes:
+            print(f"PROFILE_REVIEW {note}")
+        if profile_notes:
+            advisories.append("project_profile_review_suggested")
 
     patterns = safe_project_path(project_root, ".oracle-apex-ai/app-patterns.md")
     if patterns.is_file():
@@ -1049,6 +1066,19 @@ def command_doctor(args: argparse.Namespace) -> int:
         print(f"DOCTOR BLOCKED count={len(blockers)} advisories={len(advisories)}")
         return 1
     print(f"DOCTOR {'READY' if not advisories else 'ADVISORY'} count={len(advisories)}")
+    return 0
+
+
+def command_profile_review(args: argparse.Namespace) -> int:
+    project_root = args.project_root.resolve()
+    validate_project_root(project_root)
+    profile = safe_project_path(project_root, ".oracle-apex-ai/project-profile.md")
+    if not profile.is_file():
+        print("PROFILE_REVIEW profile_missing: create a project-owned profile from the template")
+        return 0
+    for note in review_profile(profile.read_text(encoding="utf-8", errors="strict")):
+        print(f"PROFILE_REVIEW {note}")
+    print("PROFILE_REVIEW complete; suggestions only; no files changed or database checked")
     return 0
 
 
@@ -1186,6 +1216,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     doctor.set_defaults(handler=command_doctor)
+
+    profile_review = subparsers.add_parser(
+        "profile-review", help="Suggest non-destructive profile reconciliation; never print private values."
+    )
+    profile_review.add_argument("--project-root", type=Path, default=Path.cwd())
+    profile_review.set_defaults(handler=command_profile_review)
 
     check = subparsers.add_parser(
         "check", help="Compare an installed project with a local upstream source."

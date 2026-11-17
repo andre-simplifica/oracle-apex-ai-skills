@@ -6,6 +6,12 @@ This project uses a simple changelog format. Dates use `YYYY-MM-DD`.
 
 ## Unreleased
 
+- Added a private, read-only SQLcl target-preflight generator with explicit database/APEX identity expectations, same-session integration guidance, and a SQL-only source route.
+- Added an opt-in two-session Object Lock ownership harness for isolated disposable DEV schemas; live Oracle acceptance remains pending.
+- Added advisory project-profile linting and a non-destructive `profile-review` command; unfilled scaffold identity fields now produce `doctor` advisories.
+- Added GitHub Actions validation with pinned actions and Python 3.10/3.14; no database connections occur in CI.
+- Recorded why internal APEX 24.2 recipes and a generic SQL export coordinator remain deferred, separately from the APEX 26.2 APEXlang kit.
+
 - Fixed object-lock package compilation by evaluating private byte-truncation helpers in PL/SQL before SQL DML.
 - Accepted Oracle's UTC expression for the expiry timestamp index in both runtime audit and strict installation validation. Runtime API version remains 1.1.0.
 
