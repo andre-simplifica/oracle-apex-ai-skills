@@ -2,6 +2,9 @@
 
 Use SQLcl as the reproducible technical route for Oracle Database and APEX.
 
+For a reusable identity assertion, see [target-preflight.md](target-preflight.md).
+Its generator never connects; a standalone pass does not verify a later session.
+
 ## Common Uses
 
 - Diagnostic queries.

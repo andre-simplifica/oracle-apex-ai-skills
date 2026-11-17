@@ -44,6 +44,12 @@ The manifest records:
 
 `status` verifies local integrity. `doctor` also reports project-owned profile/pattern/export readiness and accepts `--apex-version` for live version-policy checks. The standalone compatibility validator blocks unsupported releases and unavailable features. `check` compares a new source. `install` and `update` support `--dry-run`. Update stops on managed-file drift and uses temporary backups plus atomic file replacement for rollback on failure. `--initialize-missing-project-files` creates only newly introduced missing templates and never replaces custom project files.
 
+`doctor` and `profile-review` offer advisory reconciliation of the profile without
+printing its private values or rewriting it. Opt-in helpers generate a read-only
+target identity check and exercise lock ownership in an isolated DEV lab. Their
+initial SQL/runtime validation limitations are recorded in the
+[backlog decisions](backlog-decisions.md); local CI does not contact Oracle.
+
 The script does not fetch the network itself. The agent or developer obtains and validates a Git source first, which keeps authentication and ref selection visible.
 
 For a Git source, the manager requires a clean checkout and verifies that `--source-ref` resolves to the checked-out `HEAD`. It strips URL credentials and query strings before writing the repository identifier to project metadata.

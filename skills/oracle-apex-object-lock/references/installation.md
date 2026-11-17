@@ -88,3 +88,7 @@ The script refuses to continue while a non-expired active lock exists. Oracle DD
 Anything less is `PARTIAL` or `INCOMPATIBLE`, not "working".
 
 For a new runtime or major upgrade, also perform a controlled two-session DEV test: session A acquires one synthetic supported-object lock; session B must fail to acquire/assert it; session A releases it; session B can then acquire and release it. Do not run that mutating test during a read-only audit.
+
+The [two-session harness](concurrency-test.md) provides this scenario for an isolated
+disposable DEV schema. Runtime calls can expire unrelated rows, so it refuses a
+table containing other fixture keys; it must not be run in shared active DEV.

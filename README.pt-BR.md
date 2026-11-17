@@ -165,7 +165,17 @@ Util/scripts/apex_version.py
 Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
+Util/scripts/profile_lint.py
+Util/scripts/target_preflight.py
+Util/scripts/object_lock_smoke.py
 ```
+
+O [preflight de identidade](skills/oracle-apex-dev/references/target-preflight.md)
+gera uma verificação SQL somente leitura. O [teste do lock](skills/oracle-apex-object-lock/references/concurrency-test.md)
+exige um laboratório DEV isolado e autorização específica. O comando `profile-review`
+oferece sugestões de conciliação sem reescrever o perfil. Esses auxiliares não
+adicionam suporte a APEXlang: projetos APEX 26.2 com essa fonte usam o
+[kit APEXlang separado](https://github.com/andre-simplifica/oracle-apex-ai-skills-apexlang).
 
 Ela inicializa os arquivos do projeto que estiverem ausentes, mas nunca sobrescreve:
 

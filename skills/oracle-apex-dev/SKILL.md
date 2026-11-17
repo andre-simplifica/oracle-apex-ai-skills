@@ -53,6 +53,7 @@ Do not put conventions from one specific application into this skill core.
 - **Page Designer**: follow [page-designer.md](references/page-designer.md).
 - **Dynamic Content and package-owned UI**: follow [dynamic-content-regions.md](references/dynamic-content-regions.md) for branded/non-standard layouts, filters, dashboard actions, exports, and reusable `RETURN CLOB` regions.
 - **SQLcl**: follow [sqlcl.md](references/sqlcl.md).
+- **Repeatable target checks**: use [target-preflight.md](references/target-preflight.md) to generate a read-only identity check for the same SQLcl session; generation does not connect or authorize the following operation.
 - **SQL/PLSQL standards**: follow [sql-plsql-standards.md](references/sql-plsql-standards.md) before writing or reviewing database code.
 - **REST integrations**: follow [rest-integrations.md](references/rest-integrations.md) before creating, changing, or debugging outbound APIs, OAuth, webhooks, or OpenAPI-backed flows.
 - **APEX debugging**: follow [apex-debugging.md](references/apex-debugging.md) for runtime errors, Session State, Dynamic Actions, AJAX, upload/import flows, and generic APEX errors.

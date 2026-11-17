@@ -7,6 +7,7 @@ Run the manager already copied into the consuming repository:
 ```bash
 python3 Util/scripts/manage_oracle_apex_ai_skills.py status --project-root .
 python3 Util/scripts/manage_oracle_apex_ai_skills.py doctor --project-root .
+python3 Util/scripts/manage_oracle_apex_ai_skills.py profile-review --project-root .
 ```
 
 Statuses:
@@ -80,7 +81,7 @@ The updater:
 
 - copies the four core skills;
 - updates its own project manager;
-- updates the four managed export/pending/retention validators;
+- updates managed validation, retention, identity-preflight and lock-test helpers;
 - updates compatibility and source/checksum metadata;
 - preserves project-owned standards and migrations;
 - creates a newly introduced project template only with the explicit `--initialize-missing-project-files` flag and only when absent;
@@ -99,6 +100,16 @@ The updater never:
 When a new kit requires a newer object-lock runtime, the compatibility diff reports it. Audit and database installation remain separate authorized operations.
 
 ## Contribute Improvements
+
+The GitHub Actions workflow runs `bash scripts/validate_repo.sh` for pull requests
+and pushes to `main`, with Python 3.10 and 3.14 on Ubuntu 24.04. Local prerequisites
+are Python 3.10+, Bash, Git and ripgrep (`rg`); no pip dependency or Oracle
+credential is needed. The workflow has read-only repository permissions and pins
+actions to commit SHAs. It checks local contracts, not Oracle runtime behavior or
+full JSON Schema compliance. Live tests remain separate authorized operations.
+
+See [backlog-decisions.md](backlog-decisions.md) for the scope and deferred work
+from the 2026-11-17 review.
 
 Contribute generic behavior here; keep application-specific rules in the consuming project.
 

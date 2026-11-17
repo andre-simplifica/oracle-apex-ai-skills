@@ -165,7 +165,17 @@ Util/scripts/apex_version.py
 Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
+Util/scripts/profile_lint.py
+Util/scripts/target_preflight.py
+Util/scripts/object_lock_smoke.py
 ```
+
+The optional [target preflight](skills/oracle-apex-dev/references/target-preflight.md)
+generates a read-only SQL check; the [lock smoke test](skills/oracle-apex-object-lock/references/concurrency-test.md)
+requires a separately authorized isolated DEV lab. `profile-review` offers
+non-destructive reconciliation suggestions. These helpers do not add APEXlang
+support: APEX 26.2 APEXlang projects use the separate
+[APEXlang kit](https://github.com/andre-simplifica/oracle-apex-ai-skills-apexlang).
 
 It initializes missing project-owned files but never overwrites them:
 

@@ -488,7 +488,28 @@ class ProjectInstallationTests(unittest.TestCase):
         )
         self.assertIn("APEX_26_1_PUBLIC_APIS AVAILABLE", completed.stdout)
         self.assertIn("APEXLANG_SKILL_POLICY DISABLED", completed.stdout)
-        self.assertIn("DOCTOR READY count=0", completed.stdout)
+        self.assertIn("PROFILE_REVIEW field_unfilled", completed.stdout)
+        self.assertIn("DOCTOR ADVISORY count=1", completed.stdout)
+
+    def test_installed_profile_review_is_repeatable_and_preserves_private_content(self) -> None:
+        run_manager("install", "--project-root", str(self.project), *self.source_arguments())
+        profile = self.project / ".oracle-apex-ai/project-profile.md"
+        profile.write_text("# Local rules\nprivate-example\n", encoding="utf-8")
+        before = profile.read_bytes()
+        manager = self.project / "Util/scripts/manage_oracle_apex_ai_skills.py"
+        command = [sys.executable, str(manager), "profile-review", "--project-root", str(self.project)]
+        first = subprocess.run(command, text=True, capture_output=True, check=True)
+        second = subprocess.run(command, text=True, capture_output=True, check=True)
+        self.assertEqual(first.stdout, second.stdout)
+        self.assertNotIn("private-example", first.stdout)
+        self.assertIn("version_missing", first.stdout)
+        self.assertEqual(before, profile.read_bytes())
+        for helper in ("target_preflight.py", "object_lock_smoke.py"):
+            help_result = subprocess.run(
+                [sys.executable, str(self.project / "Util/scripts" / helper), "--help"],
+                text=True, capture_output=True,
+            )
+            self.assertEqual(0, help_result.returncode, help_result.stderr)
 
     def test_doctor_blocks_unsupported_apex_release(self) -> None:
         run_manager(

@@ -309,6 +309,25 @@ class ExportToolingTests(unittest.TestCase):
             completed.stdout,
         )
 
+    def test_26_2_still_uses_sql_and_does_not_enable_apexlang(self) -> None:
+        root = self.write_apex_export(include_readable=False, quoted_scn=True)
+        sql = run_script(
+            "scripts/validate_apex_export.py", "--root", str(root),
+            "--app-id", "100", "--apex-version", "26.2",
+        )
+        self.assertIn("atomic_formats=split-sql,monolithic-sql", sql.stdout)
+        blocked = run_script(
+            "scripts/validate_apex_compatibility.py", "--apex-version", "26.2",
+            "--require", "apexlang", expected_returncode=2,
+        )
+        self.assertIn("REQUIREMENT apexlang BLOCKED", blocked.stdout)
+        (root / "application.apx").write_text("not accepted\n", encoding="utf-8")
+        rejected = run_script(
+            "scripts/validate_apex_export.py", "--root", str(root),
+            "--app-id", "100", "--apex-version", "26.2", expected_returncode=2,
+        )
+        self.assertIn("APEXlang", rejected.stderr)
+
     def test_apex_validator_rejects_readable_yaml_on_26_1(self) -> None:
         root = self.write_apex_export(include_readable=True)
         completed = run_script(

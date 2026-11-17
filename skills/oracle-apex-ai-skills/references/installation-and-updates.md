@@ -27,6 +27,9 @@ Util/scripts/apex_version.py
 Util/scripts/validate_oracle_apex_compatibility.py
 Util/scripts/validate_oracle_apex_export.py
 Util/scripts/validate_oracle_apex_release_bundle.py
+Util/scripts/profile_lint.py
+Util/scripts/target_preflight.py
+Util/scripts/object_lock_smoke.py
 ```
 
 The project owns and the installer never overwrites:
@@ -65,6 +68,11 @@ python3 <source>/scripts/manage_project_installation.py install \
 10. Audit the object-lock runtime separately. Do not connect automatically during file installation.
 
 If the project already contains a profile or patterns, preserve them byte-for-byte.
+
+`doctor` now reports unfilled template identity fields as advisories. Use
+`profile-review --project-root <project>` for repeatable reconciliation suggestions;
+neither command rewrites the profile. The preflight generator and lock smoke test
+are opt-in helpers; file installation never executes either against Oracle.
 
 ## Check and Update
 

@@ -58,6 +58,21 @@ If the four skills are already installed but the project intentionally skipped t
 
 ## How to Use It
 
+For a read-only reconciliation plan, run:
+
+```bash
+python3 Util/scripts/manage_oracle_apex_ai_skills.py profile-review --project-root .
+```
+
+`doctor` includes the same advisory review. It checks the version marker, a small
+set of standard sections and unfilled identity fields, and the SQL/APEXlang route.
+Fenced examples do not count as configuration. Unrecognized sections or labels
+may be intentional local equivalents; locate them before adding anything. Unknown
+custom sections are preserved. Suggestions never print field values or write a
+profile, and their exit status is not proof of environment readiness. A newer
+marker requires the matching kit, not a downgrade. Merge only relevant guidance
+manually and retain local decisions; no automatic Markdown migration is provided.
+
 Before creating or editing a page, read the profile and answer:
 
 - Which existing page is the best model?
